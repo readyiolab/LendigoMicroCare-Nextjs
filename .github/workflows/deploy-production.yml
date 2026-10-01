@@ -1,0 +1,137 @@
+name: Deploy Next.js Frontend Production
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+concurrency:
+  group: next-frontend-production
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build standalone bundle
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      # NEXT_PUBLIC_* values are inlined here from the committed .env.production;
+      # the encryption key comes from a repository secret instead of git.
+      - name: Build
+        env:
+          NEXT_PUBLIC_PAYLOAD_ENCRYPTION_KEY: ${{ secrets.NEXT_PUBLIC_PAYLOAD_ENCRYPTION_KEY }}
+        run: |
+          if [ -z "$NEXT_PUBLIC_PAYLOAD_ENCRYPTION_KEY" ]; then
+            echo "Missing repository secret NEXT_PUBLIC_PAYLOAD_ENCRYPTION_KEY (must match backend PAYLOAD_ENCRYPTION_KEY)"
+            exit 1
+          fi
+          npm run build
+
+      - name: Assemble release
+        run: |
+          set -e
+          mkdir -p release
+          cp -r .next/standalone/. release/
+          mkdir -p release/.next
+          cp -r .next/static release/.next/static
+          cp -r public release/public
+          cp ecosystem.config.cjs release/
+          test -f release/server.js
+          tar -czf release.tar.gz -C release .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: next-release
+          path: release.tar.gz
+          retention-days: 7
+
+  deploy:
+    name: Deploy to EC2
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: next-release
+
+      - name: Upload and activate release
+        env:
+          PROD_HOST: ${{ secrets.PROD_HOST }}
+          PROD_USER: ${{ secrets.PROD_USER }}
+          PROD_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+          RELEASE_ID: ${{ github.sha }}
+        run: |
+          set -e
+          eval $(ssh-agent -s)
+          echo "$PROD_SSH_KEY" | tr -d '\r' | ssh-add -
+          SSH_OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=60"
+
+          scp $SSH_OPTS release.tar.gz "$PROD_USER@$PROD_HOST:/tmp/next-release-$RELEASE_ID.tar.gz"
+
+          ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" RELEASE_ID="$RELEASE_ID" bash << 'EOF'
+            set -e
+
+            BASE_DIR="/var/www/LendigoMicroCare/LendigoMicro-NextFrontend"
+            RELEASE_DIR="$BASE_DIR/releases/$RELEASE_ID"
+            APP_NAME="lendigo-next-frontend"
+
+            echo "======================================"
+            echo "Starting Next.js frontend deployment ($RELEASE_ID)"
+            echo "======================================"
+
+            mkdir -p "$RELEASE_DIR"
+            tar -xzf "/tmp/next-release-$RELEASE_ID.tar.gz" -C "$RELEASE_DIR"
+            rm -f "/tmp/next-release-$RELEASE_ID.tar.gz"
+
+            ln -sfn "$RELEASE_DIR" "$BASE_DIR/current"
+
+            # Recreate the process so PM2 picks up the new release directory.
+            pm2 delete "$APP_NAME" >/dev/null 2>&1 || true
+            pm2 start "$RELEASE_DIR/ecosystem.config.cjs"
+            pm2 save
+
+            echo "Health check..."
+            for i in $(seq 1 20); do
+              if curl -fsS -o /dev/null "http://127.0.0.1:3001/login"; then
+                echo "Server is up"
+                break
+              fi
+              if [ "$i" = "20" ]; then
+                echo "Health check failed"
+                pm2 logs "$APP_NAME" --lines 50 --nostream
+                exit 1
+              fi
+              sleep 2
+            done
+
+            echo "Pruning old releases..."
+            ls -1dt "$BASE_DIR"/releases/* | tail -n +6 | xargs -r rm -rf
+
+            pm2 status "$APP_NAME"
+
+            echo "======================================"
+            echo "Next.js frontend deployment completed"
+            echo "======================================"
+          EOF

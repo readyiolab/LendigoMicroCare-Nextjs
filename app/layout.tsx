@@ -1,15 +1,34 @@
-import { Geist, Geist_Mono, Inter } from "next/font/google"
+import type { Metadata, Viewport } from "next"
+import { Outfit } from "next/font/google"
 
 import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
-import { cn } from "@/lib/utils";
+import { Providers } from "./providers"
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'})
-
-const fontMono = Geist_Mono({
+const outfit = Outfit({
   subsets: ["latin"],
-  variable: "--font-mono",
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-outfit",
 })
+
+export const metadata: Metadata = {
+  title: "LendigoMicrocare | Fast Personal Loans",
+  description:
+    "Access your LendigoMicrocare account. Fast, secure, and transparent personal loans for your financial needs.",
+  robots: { index: false, follow: false },
+  manifest: "/manifest.json",
+  icons: { icon: "/favicon.ico" },
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent" },
+  other: { "mobile-web-app-capable": "yes" },
+}
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#000000",
+}
 
 export default function RootLayout({
   children,
@@ -17,13 +36,10 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html
-      lang="en"
-      suppressHydrationWarning
-      className={cn("antialiased", fontMono.variable, "font-sans", inter.variable)}
-    >
-      <body>
-        <ThemeProvider>{children}</ThemeProvider>
+    // Browser extensions (screen recorders, Grammarly) add attributes to <html>/<body> before hydration.
+    <html lang="en" className={outfit.variable} suppressHydrationWarning>
+      <body suppressHydrationWarning>
+        <Providers>{children}</Providers>
       </body>
     </html>
   )
