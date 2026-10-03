@@ -163,8 +163,12 @@ export default function LoanBookMisPage() {
     setLoading(true);
     setError('');
     try {
-      const recon = await adminAPI.getMisReconciliation({ as_on_date: applied.asOnDate });
-      setReconciliation(recon.status === 1 ? recon.data : null);
+      try {
+        const recon = await adminAPI.getMisReconciliation({ as_on_date: applied.asOnDate });
+        setReconciliation(recon.status === 1 ? recon.data : null);
+      } catch {
+        setReconciliation(null);
+      }
       if (tab === 'payments') {
         const params = toPaymentParams(applied);
         const [listRes, summaryRes] = await Promise.all([
