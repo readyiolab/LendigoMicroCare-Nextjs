@@ -382,13 +382,12 @@ export default function AdminApplications() {
       // Details page acquires the lock via acquireLock=true.
       
       if (actionType === 'fill') {
-        const response = await adminAPI.ensureAssistedToken(appId);
-        const assistedToken = response?.data?.assistedToken;
-        if (response?.status === 1 && assistedToken && assistedToken !== 'null') {
-          navigate(`/admin/applications/fill/${assistedToken}`);
-        } else {
-          setError(response?.message || 'Unable to open assisted fill: missing session token.');
+        const leadId = redirectPath;
+        if (!leadId) {
+          setError('This application has no lead id yet. Refresh the list and try Fill again.');
+          return;
         }
+        navigate(`/admin/applications/fill/${encodeURIComponent(leadId)}`);
         return;
       }
 

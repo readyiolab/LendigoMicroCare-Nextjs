@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, ShieldCheck } from 'lucide-react';
 import { adminAPI } from '@/lib/api';
@@ -16,6 +17,49 @@ export default function DigiLockerPanel({
   onAlreadyVerified,
   alerts = null,
 }) {
+  const [kycLink, setKycLink] = useState('');
+
+  const startAdminDigitap = async () => {
+    const popup = window.open('about:blank', '_blank');
+    setDigioLoading(true);
+    setError('');
+    setSuccess('');
+    setKycLink('');
+    try {
+      const response = await adminAPI.initiateDigioKYC(applicationId);
+      if (response.status !== 1) {
+        popup?.close();
+        setError(response.message || 'Failed to start Digitap KYC');
+        return;
+      }
+      const data = response.data || {};
+      if (data.alreadyVerified) {
+        popup?.close();
+        setSuccess(data.message || 'eKYC already completed. Aadhaar and PAN are verified.');
+        if (data.ekycStepCompleted) onAlreadyVerified?.();
+        return;
+      }
+      const url = data.accessUrl || data.kycUrl;
+      if (!url) {
+        popup?.close();
+        setError('Digitap did not return a KYC link. Try again.');
+        return;
+      }
+      setKycLink(url);
+      if (popup && !popup.closed) {
+        popup.location.href = url;
+        setSuccess('Digitap KYC opened in a new tab. Ask the customer to finish Aadhaar and PAN there.');
+      } else {
+        setSuccess('Digitap KYC is ready. Use Open Digitap KYC if the new tab was blocked.');
+      }
+    } catch (err) {
+      popup?.close();
+      setError(err.response?.data?.message || err.message || 'Failed to start Digitap KYC');
+    } finally {
+      setDigioLoading(false);
+    }
+  };
+
   return (
     <>
       <div className="p-3 bg-zinc-50 border border-zinc-100 rounded-lg flex gap-3 items-center">
@@ -80,35 +124,26 @@ export default function DigiLockerPanel({
 
       {isAdminMode && applicationId && (
         <div className="rounded-lg border border-indigo-100 bg-indigo-50/50 p-3 flex items-center justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <p className="text-[11px] font-black uppercase tracking-wide text-indigo-900">Digitap KYC</p>
-            <p className="text-[10px] text-indigo-700 mt-0.5">Start online Aadhaar verification for this fill. Documents below remain optional backup.</p>
+            <p className="text-[10px] text-indigo-700 mt-0.5">Opens the customer Aadhaar check in a new tab. Documents below remain optional backup.</p>
+            {kycLink && (
+              <a
+                href={kycLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-block text-[11px] font-bold text-indigo-800 underline underline-offset-2"
+              >
+                Open Digitap KYC
+              </a>
+            )}
           </div>
           <Button
             type="button"
             size="sm"
-            className="h-8 text-[11px] bg-indigo-700 hover:bg-indigo-800 text-white"
+            className="h-8 shrink-0 text-[11px] bg-indigo-700 hover:bg-indigo-800 text-white"
             disabled={digioLoading}
-            onClick={async () => {
-              setDigioLoading(true);
-              setError('');
-              setSuccess('');
-              try {
-                const response = await adminAPI.initiateDigioKYC(applicationId);
-                if (response.status === 1) {
-                  setSuccess(response.message || 'Digitap KYC started. Complete the customer ID check.');
-                  if (response.data?.alreadyVerified && response.data?.ekycStepCompleted) {
-                    onAlreadyVerified?.();
-                  }
-                } else {
-                  setError(response.message || 'Failed to start Digitap KYC');
-                }
-              } catch (err) {
-                setError(err.response?.data?.message || err.message || 'Failed to start Digitap KYC');
-              } finally {
-                setDigioLoading(false);
-              }
-            }}
+            onClick={startAdminDigitap}
           >
             {digioLoading ? 'Starting…' : 'Start Digitap KYC'}
           </Button>

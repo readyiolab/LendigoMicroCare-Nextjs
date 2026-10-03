@@ -368,7 +368,7 @@ const ApplicationTable = memo(function ApplicationTable({
                             size="sm"
                             className="h-7 px-2.5 text-[11px] bg-slate-900 hover:bg-slate-800 text-white"
                             disabled={lockingAppId === appRef || lockBlocksActions}
-                            onClick={() => handleLockAndAction(appRef, 'fill')}
+                            onClick={() => handleLockAndAction(appRef, 'fill', app.lead_id)}
                           >
                             <Pencil className="h-3 w-3 mr-1" />
                             Fill

@@ -180,7 +180,8 @@ export default function DsaLeads() {
       const res = await dsaAPI.convertLead(leadId);
       const { ok, data, message } = unwrapDsaResponse(res);
       if (ok) {
-        const fillUrl = data?.fillUrl || (data?.assistedToken ? `/admin/applications/fill/${data.assistedToken}` : null);
+        const fillRef = data?.application?.lead_id || data?.assistedToken;
+        const fillUrl = data?.fillUrl || (fillRef ? `/admin/applications/fill/${encodeURIComponent(fillRef)}` : null);
         if (fillUrl) navigate(fillUrl);
         else {
           showSuccess('Lead converted');
@@ -199,13 +200,14 @@ export default function DsaLeads() {
 
     const isDraft = !l.application_status || l.application_status === 'draft';
 
-    if (isDraft && l.assisted_token) {
+    const fillRef = l.lead_id || l.assisted_token;
+    if (isDraft && fillRef) {
       return (
         <Button
           size="sm"
           variant="outline"
           className="h-8 rounded-lg text-blue-700 border-blue-200 hover:bg-blue-50"
-          onClick={() => navigate(`/admin/applications/fill/${l.assisted_token}`)}
+          onClick={() => navigate(`/admin/applications/fill/${encodeURIComponent(fillRef)}`)}
         >
           Continue application
         </Button>
@@ -225,13 +227,13 @@ export default function DsaLeads() {
       );
     }
 
-    if (l.assisted_token) {
+    if (fillRef) {
       return (
         <Button
           size="sm"
           variant="outline"
           className="h-8 rounded-lg"
-          onClick={() => navigate(`/admin/applications/fill/${l.assisted_token}`)}
+          onClick={() => navigate(`/admin/applications/fill/${encodeURIComponent(fillRef)}`)}
         >
           Continue application
         </Button>

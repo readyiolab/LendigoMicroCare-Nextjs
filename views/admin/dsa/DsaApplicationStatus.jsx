@@ -51,8 +51,9 @@ export default function DsaApplicationStatus() {
         const { ok, data, message } = unwrapDsaResponse(res);
         if (ok) {
           setPayload(data);
-          if (data?.display?.phase === 'draft' && data?.application?.assisted_token) {
-            navigate(`/admin/applications/fill/${data.application.assisted_token}`, { replace: true });
+          const fillRef = data?.application?.application_lead_id || data?.application?.assisted_token;
+          if (data?.display?.phase === 'draft' && fillRef) {
+            navigate(`/admin/applications/fill/${encodeURIComponent(fillRef)}`, { replace: true });
             return;
           }
         } else {

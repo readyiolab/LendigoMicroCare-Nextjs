@@ -14,9 +14,7 @@ import {
   Briefcase,
   MapPin,
   IndianRupee,
-  ArrowRight,
   ChevronLeft,
-  ChevronRight,
   Camera,
   Fingerprint,
   Home,
@@ -145,13 +143,11 @@ export default function AdminAssistedApplication() {
           return;
         }
 
-        // 2. Fetch progress via admin API (customer /loan/* returns 403 for staff sessions)
-        const progressRes = await adminAPI.getApplicationProgress(appId);
-        if (progressRes.status === 1) {
-          setProgress(progressRes.data);
+        const progressData = fullData.progress;
+        if (progressData) {
+          setProgress(progressData);
 
-          // Determine current step based on progress
-          const currentStepName = progressRes.data.currentStep;
+          const currentStepName = progressData.currentStep;
           let stepIndex = STEPS.findIndex((s) => s.id === currentStepName);
 
           if (stepIndex === -1 && currentStepName === 'esign') {
@@ -275,6 +271,9 @@ export default function AdminAssistedApplication() {
                 </Button>
                 <div className="flex flex-col">
                     <h1 className="text-sm text-slate-900 tracking-widest uppercase">Assisted Application</h1>
+                    {applicationData?.application?.lead_id && (
+                      <p className="text-[11px] font-mono text-slate-500">{applicationData.application.lead_id}</p>
+                    )}
                 </div>
             </div>
 
@@ -431,7 +430,7 @@ export default function AdminAssistedApplication() {
                         </div>
 
                         {/* Action Bar Footer */}
-                        <div className="bg-slate-50 px-5 py-4 border-t border-slate-200 flex items-center justify-between">
+                        <div className="bg-slate-50 px-5 py-4 border-t border-slate-200 flex items-center">
                             <Button
                                 variant="outline"
                                 onClick={() => setCurrentStepIndex((prev) => Math.max(0, prev - 1))}
@@ -441,17 +440,6 @@ export default function AdminAssistedApplication() {
                                 <ChevronLeft className="w-4 h-4 mr-2" />
                                 Previous
                             </Button>
-
-                            <div className="flex items-center gap-4">
-                                <Button
-                                    onClick={() => setCurrentStepIndex((prev) => Math.min(STEPS.length - 1, prev + 1))}
-                                    disabled={currentStepIndex === STEPS.length - 1}
-                                    className="h-10 px-4 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-xs transition-all shadow-md shadow-blue-100 disabled:opacity-30"
-                                >
-                                    Proceed
-                                    <ChevronRight className="w-4 h-4 ml-2" />
-                                </Button>
-                            </div>
                         </div>
                     </div>
                     
