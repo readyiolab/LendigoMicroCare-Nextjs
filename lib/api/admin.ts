@@ -576,6 +576,27 @@ export const adminAPI = {
   exportLoanBook: (params: QueryParams = {}) =>
     apiClient.get('/admin/mis/loan-book/export', { params, responseType: 'blob' }),
 
+  getPaymentsLedger: (params: QueryParams = {}) =>
+    apiClient.get('/admin/mis/payments-ledger', { params }),
+
+  getPaymentsLedgerSummary: (params: QueryParams = {}) =>
+    apiClient.get('/admin/mis/payments-ledger/summary', { params }),
+
+  exportPaymentsLedger: (params: QueryParams = {}) =>
+    apiClient.get('/admin/mis/payments-ledger/export', { params, responseType: 'blob' }),
+
+  getCollectionEfficiency: (params: QueryParams = {}) =>
+    apiClient.get('/admin/mis/collection-efficiency', { params }),
+
+  exportCollectionEfficiency: (params: QueryParams = {}) =>
+    apiClient.get('/admin/mis/collection-efficiency/export', { params, responseType: 'blob' }),
+
+  getMisReconciliation: (params: QueryParams = {}) =>
+    apiClient.get('/admin/mis/reconciliation', { params }),
+
+  exportMisWorkbook: (params: QueryParams = {}) =>
+    apiClient.get('/admin/mis/export', { params, responseType: 'blob' }),
+
   // ==========================================
   // LEDGER BOOK (Phase 5)
   // ==========================================
