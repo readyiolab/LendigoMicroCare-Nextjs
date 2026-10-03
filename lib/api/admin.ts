@@ -182,6 +182,24 @@ export const adminAPI = {
   punchDisbursal: (disbursementId: Id, data: Payload) =>
     apiClient.post(`/admin/disbursal-sheet/${disbursementId}/punch`, data),
 
+  validateBulkPunch: (items: Payload[]) =>
+    apiClient.post('/admin/disbursal-sheet/bulk-punches/validate', { items }),
+
+  createBulkPunch: (data: Payload) =>
+    apiClient.post('/admin/disbursal-sheet/bulk-punches', data),
+
+  getBulkPunch: (batchId: Id) =>
+    apiClient.get(`/admin/disbursal-sheet/bulk-punches/${batchId}`),
+
+  getBulkPunchItems: (batchId: Id, params: QueryParams = {}) =>
+    apiClient.get(`/admin/disbursal-sheet/bulk-punches/${batchId}/items`, { params }),
+
+  retryBulkPunch: (batchId: Id, data: Payload) =>
+    apiClient.post(`/admin/disbursal-sheet/bulk-punches/${batchId}/retry`, data),
+
+  cancelBulkPunch: (batchId: Id) =>
+    apiClient.post(`/admin/disbursal-sheet/bulk-punches/${batchId}/cancel`),
+
   failDisbursal: (disbursementId: Id, data: Payload) =>
     apiClient.post(`/admin/disbursal-sheet/${disbursementId}/fail`, data),
 

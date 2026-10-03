@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { adminUi } from '@/config/adminUiTokens';
+import BulkPunchDialog from '@/components/admin/disbursal/BulkPunchDialog';
 import {
   getStatusBadgeConfig,
   resolveApplicationDisplayStatus,
@@ -87,11 +88,14 @@ function SheetStatusBadge({ status, mandateStatus }) {
 export default function AdminDisbursalSheet() {
   const navigate = useNavigate();
   const [tab, setTab] = useState('eligible');
+  const rowKey = tab === 'eligible' ? 'applicationId' : 'disbursementId';
   const [leads, setLeads] = useState([]);
   const batchesRef = useRef([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [selected, setSelected] = useState(() => new Set());
+  const [picked, setPicked] = useState(() => new Map());
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [selectingAll, setSelectingAll] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [filters, setFilters] = useState({
@@ -176,10 +180,7 @@ export default function AdminDisbursalSheet() {
       setError(err?.response?.data?.message || err.message || 'Failed to load disbursal sheet');
       setLeads([]);
     } finally {
-      if (gen === fetchGenRef.current) {
-        setLoading(false);
-        setSelected(new Set());
-      }
+      if (gen === fetchGenRef.current) setLoading(false);
     }
   }, [tab, filters]);
 
@@ -207,26 +208,53 @@ export default function AdminDisbursalSheet() {
     }));
   };
 
-  const toggleRow = (id) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
+  const toggleRow = (row) => {
+    const id = row[rowKey];
+    setPicked((prev) => {
+      const next = new Map(prev);
       if (next.has(id)) next.delete(id);
-      else next.add(id);
+      else next.set(id, row);
       return next;
     });
   };
 
   const toggleAll = () => {
-    if (selected.size === leads.length) {
-      setSelected(new Set());
-      return;
+    const pageIds = leads.map((r) => r[rowKey]).filter(Boolean);
+    const allOnPage = pageIds.length > 0 && pageIds.every((id) => picked.has(id));
+    setPicked((prev) => {
+      const next = new Map(prev);
+      if (allOnPage) pageIds.forEach((id) => next.delete(id));
+      else leads.forEach((row) => { if (row[rowKey]) next.set(row[rowKey], row); });
+      return next;
+    });
+  };
+
+  const selectAllExported = async () => {
+    setSelectingAll(true);
+    setError('');
+    try {
+      const next = new Map();
+      let page = 1;
+      let totalPages = 1;
+      while (page <= totalPages && next.size < 2000) {
+        const res = await adminAPI.getDisbursalSheet({ ...filters, tab: 'exported', page, limit: 100 });
+        const payload = res?.data?.data || res?.data || {};
+        for (const row of payload.leads || []) {
+          if (row.disbursementId) next.set(row.disbursementId, row);
+        }
+        totalPages = payload.pagination?.totalPages || 1;
+        page += 1;
+      }
+      setPicked(next);
+    } catch (err) {
+      setError(err?.response?.data?.message || err.message || 'Could not select sent-to-bank loans');
+    } finally {
+      setSelectingAll(false);
     }
-    const key = tab === 'eligible' ? 'applicationId' : 'disbursementId';
-    setSelected(new Set(leads.map((r) => r[key])));
   };
 
   const handleMove = async () => {
-    if (selected.size === 0) {
+    if (picked.size === 0) {
       setError('Select at least one lead');
       return;
     }
@@ -234,12 +262,13 @@ export default function AdminDisbursalSheet() {
     setError('');
     setMessage('');
     try {
-      const res = await adminAPI.moveToDisbursalSheet([...selected]);
+      const res = await adminAPI.moveToDisbursalSheet([...picked.keys()]);
       const payload = res?.data?.data || res?.data || {};
       setMessage(
         `Moved ${payload.queued?.length || 0} lead(s) to Added to sheet (${payload.batchCode || 'batch'})`.trim()
       );
       await loadBatches(true);
+      setPicked(new Map());
       setTab('queued');
       setFilters((p) => ({ ...p, page: 1 }));
     } catch (err) {
@@ -338,7 +367,6 @@ export default function AdminDisbursalSheet() {
     }
   };
 
-  const rowKey = tab === 'eligible' ? 'applicationId' : 'disbursementId';
   const activeTab = TABS.find((t) => t.id === tab);
 
   return (
@@ -381,10 +409,20 @@ export default function AdminDisbursalSheet() {
               type="button"
               className="h-10 px-4 rounded-lg text-sm bg-blue-600 hover:bg-blue-700 text-white"
               onClick={handleMove}
-              disabled={busy || selected.size === 0}
+              disabled={busy || picked.size === 0}
             >
               <Send className="w-4 h-4 mr-2" />
               Move selected
+            </Button>
+          )}
+          {tab === 'exported' && (
+            <Button
+              type="button"
+              className="h-10 px-4 rounded-lg text-sm bg-emerald-700 hover:bg-emerald-800 text-white"
+              onClick={() => setBulkOpen(true)}
+              disabled={busy || picked.size === 0}
+            >
+              Bulk punch ({picked.size})
             </Button>
           )}
           {(tab === 'queued' || tab === 'exported') && (
@@ -408,6 +446,7 @@ export default function AdminDisbursalSheet() {
             type="button"
             onClick={() => {
               setTab(t.id);
+              setPicked(new Map());
               setFilters((p) => ({ ...p, page: 1 }));
             }}
             className={cn(
@@ -496,17 +535,31 @@ export default function AdminDisbursalSheet() {
           <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-slate-100 text-slate-600">
             {pagination.total || leads.length} leads
           </span>
-          {selected.size > 0 && (
+          {picked.size > 0 && (
             <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-100">
-              {selected.size} selected
+              {picked.size} selected
             </span>
           )}
         </div>
-        {leads.length > 0 && (
-          <Button type="button" variant="outline" className="h-9 px-3 text-sm border-slate-200" onClick={toggleAll}>
-            {selected.size === leads.length ? 'Clear selection' : 'Select page'}
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {tab === 'exported' && (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-9 px-3 text-sm border-slate-200"
+              onClick={selectAllExported}
+              disabled={selectingAll || loading}
+            >
+              {selectingAll && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Select all sent to bank
+            </Button>
+          )}
+          {leads.length > 0 && (
+            <Button type="button" variant="outline" className="h-9 px-3 text-sm border-slate-200" onClick={toggleAll}>
+              {leads.every((row) => picked.has(row[rowKey])) ? 'Clear page' : 'Select page'}
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="overflow-hidden">
@@ -546,8 +599,8 @@ export default function AdminDisbursalSheet() {
                       <TableCell>
                         <input
                           type="checkbox"
-                          checked={selected.has(id)}
-                          onChange={() => toggleRow(id)}
+                          checked={picked.has(id)}
+                          onChange={() => toggleRow(row)}
                           className="h-4 w-4 accent-blue-600"
                         />
                       </TableCell>
@@ -644,6 +697,13 @@ export default function AdminDisbursalSheet() {
           </div>
         </div>
       )}
+
+      <BulkPunchDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        rows={[...picked.values()]}
+        onFinished={fetchData}
+      />
 
       <Dialog open={punchOpen} onOpenChange={setPunchOpen}>
         <DialogContent className="sm:max-w-md rounded-lg border-slate-200">
