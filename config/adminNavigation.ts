@@ -117,6 +117,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { id: "uw-performance", label: "Underwriter report", path: "/admin/reports/underwriters", roles: ["super_admin", "operations_manager", "underwriter"], icon: "ClipboardList" },
       { id: "ops-performance", label: "Operations report", path: "/admin/reports/operations", roles: ["super_admin", "operations_manager", "underwriter"], icon: "FileSpreadsheet" },
       { id: "mgmt-funnel", label: "Management funnel", path: "/admin/reports/management-funnel", roles: ["super_admin", "operations_manager", "underwriter"], icon: "Activity" },
+      { id: "loan-book-mis", label: "Loan Book MIS", path: "/admin/reports/loan-book", roles: ["super_admin", "operations_manager", "admin"], icon: "FileSpreadsheet" },
       { id: "analytics", label: "Analytics", path: "/admin/analytics", roles: ["super_admin", "operations_manager"], icon: "LineChart" },
       { id: "portfolio", label: "Disbursed portfolio", path: "/admin/analytics?tab=portfolio", roles: ["super_admin", "operations_manager"], icon: "PieChart" },
       { id: "cibil", label: "Credit / CIBIL", path: "/admin/cibil", roles: ["super_admin", "operations_manager"], icon: "Activity" },

@@ -560,6 +560,22 @@ export const adminAPI = {
       responseType: 'blob',
     }),
 
+  // Loan Book MIS
+  getLoanBook: (params: QueryParams = {}) =>
+    apiClient.get('/admin/mis/loan-book', { params }),
+
+  getLoanBookSummary: (params: QueryParams = {}) =>
+    apiClient.get('/admin/mis/loan-book/summary', { params }),
+
+  getLoanBookDpdSummary: (params: QueryParams = {}) =>
+    apiClient.get('/admin/mis/loan-book/dpd-summary', { params }),
+
+  getLoanBookMonthly: (params: QueryParams = {}) =>
+    apiClient.get('/admin/mis/loan-book/monthly', { params }),
+
+  exportLoanBook: (params: QueryParams = {}) =>
+    apiClient.get('/admin/mis/loan-book/export', { params, responseType: 'blob' }),
+
   // ==========================================
   // LEDGER BOOK (Phase 5)
   // ==========================================
@@ -650,8 +666,8 @@ export const adminAPI = {
   livenessCheck: (applicationId: Id) =>
     apiClient.post(`/kyc/digitap/liveness/${applicationId}`),
 
-  initiateEsign: (applicationId: Id) =>
-    apiClient.post(`/kyc/digitap/esign/${applicationId}`),
+  initiateEsign: (applicationId: Id, data: QueryParams = {}) =>
+    apiClient.post(`/kyc/digitap/esign/${applicationId}`, data),
 
   checkEsignStatus: (applicationId: Id) =>
     apiClient.post(`/kyc/digitap/esign/${applicationId}/status`),
