@@ -11,6 +11,8 @@ const PAGE_SIZE = 50;
 const STATUS_OPTIONS = ['Active', 'Overdue', 'Closed'];
 const DPD_BUCKET_OPTIONS = ['Closed', 'Current', '1-7', '8-30', '31-60', '61-90', '91-180', '181+'];
 const LOAN_TYPE_OPTIONS = ['Fresh', 'Repeat'];
+const CIBIL_BAND_OPTIONS = ['No score (code)', 'No score', 'Below 550', '550-649', '650+'];
+const TICKET_BAND_OPTIONS = ['Up to 10k', '10k-20k', '20k-30k', 'Above 30k'];
 const PAYMENT_TYPE_OPTIONS = ['Part Payment', 'Closure'];
 const TIMING_OPTIONS = ['Before due date', 'On due date', 'After due date'];
 const TABS = [
@@ -40,8 +42,13 @@ const emptyFilters = () => ({
   cmId: '',
   paymentType: '',
   timingVsDue: '',
-  fromMonth: '',
-  toMonth: '',
+  fromDueMonth: '',
+  toDueMonth: '',
+  fromDisbMonth: '',
+  toDisbMonth: '',
+  cibilBand: '',
+  ticketBand: '',
+  state: '',
 });
 
 function toParams(filters) {
@@ -76,18 +83,48 @@ function toPaymentParams(filters) {
 function toEfficiencyParams(filters) {
   const params = {
     as_on_date: filters.asOnDate,
-    from_due_month: filters.fromMonth,
-    to_due_month: filters.toMonth,
-    from_disb_month: filters.fromMonth,
-    to_disb_month: filters.toMonth,
-    from_payment_month: filters.fromMonth,
-    to_payment_month: filters.toMonth,
+    from_due_month: filters.fromDueMonth,
+    to_due_month: filters.toDueMonth,
+    from_disb_month: filters.fromDisbMonth,
+    to_disb_month: filters.toDisbMonth,
+    loan_type: filters.loanType,
+    cibil_band: filters.cibilBand,
+    ticket_band: filters.ticketBand,
+    state: filters.state,
+    loan_account: filters.loanAccount.trim(),
+    cm_id: filters.cmId.trim(),
   };
   Object.keys(params).forEach((k) => { if (!params[k]) delete params[k]; });
   return params;
 }
 
-const pct = (value) => (value === null || value === undefined ? '—' : `${value}%`);
+const pct = (value) => (value === null || value === undefined ? '—' : `${Number(value).toFixed(1)}%`);
+const moneyOrDash = (value) => (value === null || value === undefined || value === '' ? '—' : inr(value));
+const countOrDash = (value) => (value === null || value === undefined || value === '' ? '—' : value);
+
+function measureCells(row) {
+  return [
+    row.label,
+    countOrDash(row.maturedLoans),
+    moneyOrDash(row.amountDue),
+    moneyOrDash(row.collectedCapped),
+    pct(row.cePercent),
+    moneyOrDash(row.waiver),
+    pct(row.ceInclWaiverPercent),
+    moneyOrDash(row.collectedOnOrBeforeDue),
+    pct(row.onTimeCePercent),
+    countOrDash(row.unpaidLoans),
+    moneyOrDash(row.unpaidAmount),
+  ];
+}
+
+const MEASURE_HEADERS = ['Loans matured', 'Amount due', 'Collected (capped)', 'CE %', 'Waiver', 'CE % incl. waiver', 'Collected on/before due', 'On-time CE %', 'Unpaid loans', 'Unpaid amount'];
+
+function MeasureTable({ title, first, block }) {
+  const rows = [...(block?.rows || [])];
+  if (block?.total) rows.push(block.total);
+  return <SectionTable title={title} headers={[first, ...MEASURE_HEADERS]} rows={rows.map(measureCells)} />;
+}
 
 const inr = (v) => Number(v || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
 
@@ -226,7 +263,7 @@ export default function LoanBookMisPage() {
     setError('');
     try {
       const res = format === 'xlsx'
-        ? await adminAPI.exportMisWorkbook({ as_on_date: applied.asOnDate })
+        ? await adminAPI.exportMisWorkbook({ ...toEfficiencyParams(applied) })
         : tab === 'payments'
           ? await adminAPI.exportPaymentsLedger({ ...toPaymentParams(applied), format: 'csv' })
           : tab === 'efficiency'
@@ -296,13 +333,25 @@ export default function LoanBookMisPage() {
           {tab === 'efficiency' ? (
             <>
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-slate-700">From month</label>
-                <Input type="month" value={draft.fromMonth} onChange={(e) => setField('fromMonth')(e.target.value)} className="h-10" />
+                <label className="text-sm font-medium text-slate-700">Due month from</label>
+                <Input type="month" value={draft.fromDueMonth} onChange={(e) => setField('fromDueMonth')(e.target.value)} className="h-10" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-slate-700">To month</label>
-                <Input type="month" value={draft.toMonth} onChange={(e) => setField('toMonth')(e.target.value)} className="h-10" />
+                <label className="text-sm font-medium text-slate-700">Due month to</label>
+                <Input type="month" value={draft.toDueMonth} onChange={(e) => setField('toDueMonth')(e.target.value)} className="h-10" />
               </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-slate-700">Disbursal month from</label>
+                <Input type="month" value={draft.fromDisbMonth} onChange={(e) => setField('fromDisbMonth')(e.target.value)} className="h-10" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-slate-700">Disbursal month to</label>
+                <Input type="month" value={draft.toDisbMonth} onChange={(e) => setField('toDisbMonth')(e.target.value)} className="h-10" />
+              </div>
+              <SelectField label="Loan type" value={draft.loanType} options={LOAN_TYPE_OPTIONS} onChange={setField('loanType')} />
+              <SelectField label="CIBIL band" value={draft.cibilBand} options={CIBIL_BAND_OPTIONS} onChange={setField('cibilBand')} />
+              <SelectField label="Ticket band" value={draft.ticketBand} options={TICKET_BAND_OPTIONS} onChange={setField('ticketBand')} />
+              <SelectField label="State" value={draft.state} options={efficiency?.options?.states || []} onChange={setField('state')} />
             </>
           ) : (
             <>
@@ -569,10 +618,22 @@ export default function LoanBookMisPage() {
           <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
         ) : efficiency ? (
           <div className="space-y-5">
-            <SectionTable title="A. Due-date collection efficiency" headers={['Due month', 'Loans', 'Matured', 'Net demand', 'Collected', 'Outstanding', 'CE on due', 'CE cumulative', 'Check']} rows={(efficiency.dueDateBased?.rows || []).map((r) => [r.dueMonth, r.loansDue, r.maturedLoans, inr(r.netDemand), inr(r.totalCollected), inr(r.outstanding), pct(r.ceOnDuePercent), pct(r.ceCumulativePercent), r.checkStatus === 'OK' ? '0' : r.check])} />
-            <SectionTable title="B. Disbursal-month cohort" headers={['Disbursal month', 'Loans', 'Fresh', 'Repeat', 'Repeat %', 'Matured net demand', 'Collected', 'CE %', 'Overdue']} rows={(efficiency.disbursalCohort?.rows || []).map((r) => [r.disbMonth, r.loansDisbursed, r.freshLoans, r.repeatLoans, pct(r.repeatPercent), inr(r.maturedNetDemand), inr(r.collectedOnMatured), pct(r.ceCumulativePercent), inr(r.overdueOnMatured)])} />
-            <SectionTable title="C. Overdue ageing (open loans)" headers={['DPD bucket', 'Loans', 'Outstanding', '% of outstanding']} rows={[...(efficiency.overdueAgeing?.rows || []).map((r) => [r.bucket, r.loanCount, inr(r.outstanding), pct(r.percentOfTotal)]), ['Total open', efficiency.overdueAgeing?.total?.loanCount, inr(efficiency.overdueAgeing?.total?.outstanding), pct(efficiency.overdueAgeing?.total?.percentOfTotal)]]} />
-            <SectionTable title="D. Cash received by payment month" headers={['Payment month', 'Receipts', 'Total', 'Before due', 'On due', 'After due', '% on / before due', 'Check']} rows={(efficiency.paymentMonth?.rows || []).map((r) => [r.month, r.receiptCount, inr(r.totalReceived), inr(r.beforeDueAmount), inr(r.onDueAmount), inr(r.afterDueAmount), pct(r.percentOnOrBeforeDue), r.checkStatus === 'OK' ? '0' : r.check])} />
+            <p className="text-sm text-slate-600">
+              Matured loans only, as on {displayDate(applied.asOnDate)}. Matured means the due date is on or before this date. CE is capped collections divided by amount due.
+            </p>
+            <MeasureTable title="1. By due month" first="Due month" block={efficiency.byDueMonth} />
+            <MeasureTable title="2. By repayment due date" first="Due date" block={efficiency.byDueDate} />
+            <MeasureTable title="3. By loan type (fresh vs repeat)" first="Loan type" block={efficiency.byLoanType} />
+            <MeasureTable title="4. By disbursal month (vintage)" first="Disb month" block={efficiency.byDisbMonth} />
+            <MeasureTable title="5. By CIBIL band" first="CIBIL band" block={efficiency.byCibilBand} />
+            <MeasureTable title="6. By ticket size" first="Ticket band" block={efficiency.byTicketSize} />
+            <MeasureTable title="7. By state" first="State" block={efficiency.byState} />
+            <SectionTable
+              title="8. DPD bucket (recalculated as-on date)"
+              headers={['DPD bucket', 'Loans', 'Unpaid amount', '% of matured due']}
+              rows={(efficiency.dpd?.rows || []).map((r) => [r.label, r.loanCount ?? '—', moneyOrDash(r.unpaidAmount), r.percentOfMaturedDue == null ? 'n/a' : pct(r.percentOfMaturedDue)])}
+            />
+            <p className="text-xs text-slate-500">{efficiency.dpd?.note}</p>
           </div>
         ) : null
       )}
