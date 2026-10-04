@@ -70,7 +70,7 @@ export function useApplicationKyc({
         return () => clearTimeout(timeout);
     }, [isEsignProcessing, fetchApplication, setIsEsignProcessing, setMessage]);
 
-    const pollUntilEsignSettled = useCallback(async () => {
+    const pollUntilEsignSettled = useCallback(async ({ previousRequestId = null } = {}) => {
         esignPollCancelRef.current = false;
         for (let attempt = 0; attempt < ESIGN_POLL_MAX_ATTEMPTS; attempt += 1) {
             if (esignPollCancelRef.current) return;
@@ -79,11 +79,17 @@ export function useApplicationKyc({
             try {
                 const resp = await adminAPI.getApplicationDetails(applicationId, { include: 'credit' });
                 const status = String(resp?.data?.application?.esign_status || '').toLowerCase();
-                if (['sent', 'initiated', 'signed', 'completed'].includes(status)) {
+                const requestId = resp?.data?.application?.esign_request_id || null;
+                const isSigned = ['signed', 'completed'].includes(status);
+                const isSent = ['sent', 'initiated'].includes(status) &&
+                    (!previousRequestId || (requestId && requestId !== previousRequestId));
+                if (isSigned || isSent) {
                     setMessage(
-                        ['signed', 'completed'].includes(status)
+                        isSigned
                             ? 'E-Sign completed by customer.'
-                            : 'E-Sign sent — waiting for customer to sign.'
+                            : (previousRequestId
+                                ? 'New e-sign link sent — waiting for customer to sign.'
+                                : 'E-Sign sent — waiting for customer to sign.')
                     );
                     setIsEsignProcessing(false);
                     await fetchApplication(true);
@@ -283,7 +289,7 @@ export function useApplicationKyc({
     }, [admin]);
     const isOpsStaff = canRunPostOfferDigio;
 
-    const handleInitiateEsign = useCallback(async () => {
+    const handleInitiateEsign = useCallback(async ({ regenerate = false, previousRequestId = null } = {}) => {
         if (!canRunPostOfferDigio()) {
             setError('Only Credit Manager, Underwriter, or Operations can send the loan agreement for signing.');
             return;
@@ -297,12 +303,19 @@ export function useApplicationKyc({
         setError('');
         setMessage('');
         try {
-            const response = await adminAPI.initiateEsign(applicationId);
+            const response = await adminAPI.initiateEsign(
+                applicationId,
+                regenerate ? { regenerate: true } : {}
+            );
             if (response.status === 1) {
                 if (response.message && String(response.message).toLowerCase().includes('queued')) {
-                    setMessage('E-Sign generation started in background. Please wait...');
+                    setMessage(
+                        regenerate
+                            ? 'Generating a new e-sign link. Please wait...'
+                            : 'E-Sign generation started in background. Please wait...'
+                    );
                     // Socket clears processing early; poll is fallback if socket misses
-                    pollUntilEsignSettled();
+                    pollUntilEsignSettled({ previousRequestId: regenerate ? previousRequestId : null });
                 } else {
                     setMessage(response.message || 'E-Sign request initiated successfully!');
                     fetchApplication(true);

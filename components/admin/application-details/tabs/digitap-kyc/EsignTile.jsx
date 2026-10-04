@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { FileText, RefreshCw, Copy, Download, Upload } from 'lucide-react';
+import { FileText, RefreshCw, Copy, Download, Upload, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import VerificationTile from './VerificationTile';
 
@@ -95,30 +95,34 @@ export default function EsignTile({
                             <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">Send a signing link to the customer’s phone.</p>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                            {!isReadOnly && esignAwaitingCustomer && esignSigningUrl && (
+                            {!isReadOnly && esignAwaitingCustomer && (
                                 <>
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        className="h-8 px-3 text-[10px] font-semibold border-indigo-200 text-indigo-700"
-                                        onClick={() => window.open(esignSigningUrl, '_blank', 'noopener,noreferrer')}
-                                    >
-                                        Open link
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        className="h-8 px-3 text-[10px] font-semibold"
-                                        onClick={async () => {
-                                            try {
-                                                await navigator.clipboard.writeText(esignSigningUrl);
-                                            } catch { /* ignore */ }
-                                        }}
-                                    >
-                                        <Copy className="w-3.5 h-3.5 mr-1" /> Copy
-                                    </Button>
+                                    {esignSigningUrl && (
+                                        <>
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-8 px-3 text-[10px] font-semibold border-indigo-200 text-indigo-700"
+                                                onClick={() => window.open(esignSigningUrl, '_blank', 'noopener,noreferrer')}
+                                            >
+                                                Open link
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-8 px-3 text-[10px] font-semibold"
+                                                onClick={async () => {
+                                                    try {
+                                                        await navigator.clipboard.writeText(esignSigningUrl);
+                                                    } catch { /* ignore */ }
+                                                }}
+                                            >
+                                                <Copy className="w-3.5 h-3.5 mr-1" /> Copy
+                                            </Button>
+                                        </>
+                                    )}
                                     <Button
                                         type="button"
                                         size="sm"
@@ -132,6 +136,29 @@ export default function EsignTile({
                                             <RefreshCw className="w-3.5 h-3.5 mr-1 animate-spin" />
                                         )}
                                         Check sign status
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8 px-3 text-[10px] font-semibold border-amber-200 text-amber-700 hover:bg-amber-50"
+                                        disabled={updating || isEsignProcessing || runningAction === 'esign'}
+                                        onClick={() => {
+                                            if (!window.confirm('Generate a new Digitap signing link? The old link will stop working.')) return;
+                                            handleAction(
+                                                () => handleInitiateEsign({
+                                                    regenerate: true,
+                                                    previousRequestId: data?.application?.esign_request_id || null,
+                                                }),
+                                                'esign'
+                                            );
+                                        }}
+                                        title="Create a fresh Digitap signing link and resend it to the customer"
+                                    >
+                                        {(runningAction === 'esign' || isEsignProcessing)
+                                            ? <RefreshCw className="w-3.5 h-3.5 mr-1 animate-spin" />
+                                            : <RotateCcw className="w-3.5 h-3.5 mr-1" />}
+                                        Regenerate link
                                     </Button>
                                 </>
                             )}
@@ -170,6 +197,11 @@ export default function EsignTile({
                         {!canSendToSign && (
                             <p className="text-[11px] text-amber-600">
                                 Available after video verification (Step 4).
+                            </p>
+                        )}
+                        {!isReadOnly && esignAwaitingCustomer && (
+                            <p className="text-[11px] text-slate-500">
+                                Use Regenerate link if the customer sees a Digitap error on the signing page.
                             </p>
                         )}
                     </div>
