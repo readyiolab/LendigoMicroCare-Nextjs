@@ -3,6 +3,7 @@ import { Navigate } from '@/lib/router';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { hasPermission } from '@/lib/permissionUtils';
+import { canOpenLoanBookMis } from '@/config/adminNavigation';
 
 function normalizeRole(role) {
   return String(role || '')
@@ -33,6 +34,27 @@ export function PermissionRouteGuard({ permissionCode, children }) {
       toast('Access denied', 'You do not have permission to open this page.');
     }
   }, [allowed, admin?.has_custom_permissions, permissionCode, toast]);
+
+  if (!allowed) {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
+  return children;
+}
+
+export function LoanBookMisGuard({ children }) {
+  const { admin } = useAdminAuth();
+  const { toast } = useNotifications();
+  const notifiedRef = useRef(false);
+  const roleKey = normalizeRole(admin?.role_code || admin?.role);
+  const allowed = canOpenLoanBookMis(roleKey, admin?.permissionMap);
+
+  useEffect(() => {
+    if (!allowed && admin && !notifiedRef.current) {
+      notifiedRef.current = true;
+      toast('Access denied', 'You do not have permission to open Loan Book MIS.');
+    }
+  }, [allowed, admin, toast]);
 
   if (!allowed) {
     return <Navigate to="/admin/dashboard" replace />;

@@ -189,6 +189,31 @@ export function canSeeNavItem(item: Pick<AdminNavItem, "roles"> | null | undefin
   return item.roles.includes(roleKey)
 }
 
+/** Fixed menus. A Reports view toggle must not add Loan Book MIS to these roles. */
+const BUILTIN_MENU_ROLES = new Set([
+  "super_admin",
+  "admin",
+  "telecaller",
+  "credit_manager",
+  "underwriter",
+  "approver",
+  "operations",
+  "operations_manager",
+  "collection_manager",
+  "dsa_partner",
+])
+
+/**
+ * Loan Book MIS stays on its role list for built-in menus.
+ * A custom role sees it only when Loan Book MIS (admin.reports) view is on.
+ */
+export function canOpenLoanBookMis(roleKey: unknown, permissionMap?: PermissionMap | null) {
+  const key = normalizeAdminRole(roleKey)
+  if (key === "super_admin" || key === "operations_manager" || key === "admin") return true
+  if (BUILTIN_MENU_ROLES.has(key)) return false
+  return hasPermission(permissionMap, "admin.reports", "can_view")
+}
+
 function canSeeNavItemWithPermissions(
   item: AdminNavItem,
   roleKey: string | null | undefined,
@@ -197,6 +222,10 @@ function canSeeNavItemWithPermissions(
 ) {
   if (!item?.roles?.length) return false
   if (roleKey === "super_admin") return canSeeNavItem(item, roleKey)
+
+  if (item.id === "loan-book-mis") {
+    return canOpenLoanBookMis(roleKey, permissionMap)
+  }
 
   const permissionCode = getNavItemPermissionCode(item.id)
 

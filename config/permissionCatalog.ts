@@ -73,7 +73,7 @@ export const PERMISSION_MODULES: PermissionModule[] = [
       { code: "admin.users", label: "Users" },
       { code: "admin.roles", label: "Role management" },
       { code: "admin.settings", label: "Settings" },
-      { code: "admin.reports", label: "Reports" },
+      { code: "admin.reports", label: "Loan Book MIS" },
     ],
   },
 ]
