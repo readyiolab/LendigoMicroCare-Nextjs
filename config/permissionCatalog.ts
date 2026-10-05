@@ -20,6 +20,7 @@ export const PERMISSION_MODULES: PermissionModule[] = [
     label: "Leads",
     submodules: [
       { code: "leads.fresh", label: "Fresh" },
+      { code: "leads.drafts", label: "Drafts" },
       { code: "leads.all", label: "All applications" },
       { code: "leads.assigned", label: "My assigned" },
       { code: "leads.repeat", label: "Repeat customers" },
@@ -44,6 +45,62 @@ export const PERMISSION_MODULES: PermissionModule[] = [
       { code: "payment.disbursal_sheet", label: "Disbursal sheet" },
       { code: "payment.video", label: "Video declarations" },
       { code: "payment.repayments", label: "Repayments" },
+    ],
+  },
+  {
+    id: "reports",
+    label: "Reports",
+    submodules: [
+      { code: "reports.credit_manager", label: "Credit Manager report" },
+      { code: "reports.telecaller", label: "Telecaller report" },
+      { code: "reports.underwriter", label: "Underwriter report" },
+      { code: "reports.operations", label: "Operations report" },
+      { code: "reports.funnel", label: "Management funnel" },
+      { code: "admin.reports", label: "Loan Book MIS" },
+      { code: "reports.analytics", label: "Analytics" },
+      { code: "reports.portfolio", label: "Disbursed portfolio" },
+      { code: "reports.cibil", label: "Credit / CIBIL" },
+      { code: "reports.collection", label: "Collection report" },
+    ],
+  },
+  {
+    id: "approval",
+    label: "For approval",
+    submodules: [
+      { code: "approval.online_payment", label: "Online payment" },
+      { code: "approval.settlements", label: "Settlement approvals" },
+      { code: "approval.reconciliation", label: "Reconciliation" },
+    ],
+  },
+  {
+    id: "collections",
+    label: "Collections",
+    submodules: [
+      { code: "collections.dashboard", label: "Collections dashboard" },
+      { code: "collections.overdue", label: "Overdue loans" },
+      { code: "collections.ptp", label: "Promise to pay" },
+    ],
+  },
+  {
+    id: "risk",
+    label: "Risk & Credit",
+    submodules: [
+      { code: "risk.bre", label: "BRE management" },
+      { code: "risk.credit_policy", label: "Credit policy" },
+      { code: "risk.ledger", label: "Ledger book" },
+    ],
+  },
+  {
+    id: "dsa",
+    label: "DSA Partner",
+    submodules: [
+      { code: "dsa.home", label: "Home" },
+      { code: "dsa.leads", label: "Leads" },
+      { code: "dsa.apps", label: "Applications" },
+      { code: "dsa.commissions", label: "Commissions" },
+      { code: "dsa.reports", label: "Reports" },
+      { code: "dsa.settlements", label: "Settlements" },
+      { code: "dsa.team", label: "Partners & hierarchy" },
     ],
   },
   {
@@ -73,7 +130,8 @@ export const PERMISSION_MODULES: PermissionModule[] = [
       { code: "admin.users", label: "Users" },
       { code: "admin.roles", label: "Role management" },
       { code: "admin.settings", label: "Settings" },
-      { code: "admin.reports", label: "Loan Book MIS" },
+      { code: "admin.credit_buckets", label: "Credit buckets" },
+      { code: "admin.products", label: "Loan products" },
     ],
   },
 ]

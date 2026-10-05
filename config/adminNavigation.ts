@@ -189,29 +189,21 @@ export function canSeeNavItem(item: Pick<AdminNavItem, "roles"> | null | undefin
   return item.roles.includes(roleKey)
 }
 
-/** Fixed menus. A Reports view toggle must not add Loan Book MIS to these roles. */
-const BUILTIN_MENU_ROLES = new Set([
-  "super_admin",
-  "admin",
-  "telecaller",
-  "credit_manager",
-  "underwriter",
-  "approver",
-  "operations",
-  "operations_manager",
-  "collection_manager",
-  "dsa_partner",
-])
+function permissionMapIsSet(permissionMap?: PermissionMap | null) {
+  return !!(permissionMap && Object.keys(permissionMap).length > 0)
+}
 
 /**
- * Loan Book MIS stays on its role list for built-in menus.
- * A custom role sees it only when Loan Book MIS (admin.reports) view is on.
+ * Loan Book MIS follows Reports → Loan Book MIS → View.
+ * Super Admin always sees it. A login without a permission map keeps the old allow list.
  */
 export function canOpenLoanBookMis(roleKey: unknown, permissionMap?: PermissionMap | null) {
   const key = normalizeAdminRole(roleKey)
-  if (key === "super_admin" || key === "operations_manager" || key === "admin") return true
-  if (BUILTIN_MENU_ROLES.has(key)) return false
-  return hasPermission(permissionMap, "admin.reports", "can_view")
+  if (key === "super_admin") return true
+  if (permissionMapIsSet(permissionMap)) {
+    return hasPermission(permissionMap, "admin.reports", "can_view")
+  }
+  return key === "operations_manager" || key === "admin"
 }
 
 function canSeeNavItemWithPermissions(
@@ -223,21 +215,9 @@ function canSeeNavItemWithPermissions(
   if (!item?.roles?.length) return false
   if (roleKey === "super_admin") return canSeeNavItem(item, roleKey)
 
-  if (item.id === "loan-book-mis") {
-    return canOpenLoanBookMis(roleKey, permissionMap)
-  }
-
   const permissionCode = getNavItemPermissionCode(item.id)
-
-  if (hasCustomPermissions) {
-    if (!permissionCode) {
-      return item.roles.includes("all")
-    }
+  if (permissionCode && (permissionMapIsSet(permissionMap) || hasCustomPermissions)) {
     return hasPermission(permissionMap, permissionCode, "can_view")
-  }
-
-  if (permissionCode && permissionMap && Object.keys(permissionMap).length > 0) {
-    return hasPermission(permissionMap, permissionCode, "can_view") && canSeeNavItem(item, roleKey)
   }
   return canSeeNavItem(item, roleKey)
 }
