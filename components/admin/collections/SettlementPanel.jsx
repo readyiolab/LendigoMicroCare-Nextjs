@@ -427,7 +427,7 @@ export default function SettlementPanel() {
       </CollectionDataTable>
 
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="sm:max-w-lg rounded-md border-slate-200">
+        <DialogContent className="sm:max-w-xl rounded-md border-slate-200">
           <DialogHeader>
             <DialogTitle className="text-base font-semibold">Request Settlement</DialogTitle>
             <DialogDescription className="text-xs">

@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, User, X } from 'lucide-react';
 import { collectionAPI } from '@/lib/api/collection';
 import { adminAPI } from '@/lib/api/admin';
@@ -81,34 +80,9 @@ export default function CollectionLoanPicker({
   const [picking, setPicking] = useState(false);
   const [searchError, setSearchError] = useState('');
   const wrapRef = useRef(null);
-  const inputRef = useRef(null);
   const abortRef = useRef(null);
-  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
 
   const isLocked = Boolean(selectedLoan?.loanApplicationId);
-
-  const updateDropdownPosition = useCallback(() => {
-    const el = inputRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    setDropdownPos({
-      top: rect.bottom + window.scrollY + 4,
-      left: rect.left + window.scrollX,
-      width: rect.width,
-    });
-  }, []);
-
-  useLayoutEffect(() => {
-    if (dropdownOpen) {
-      updateDropdownPosition();
-      window.addEventListener('resize', updateDropdownPosition);
-      window.addEventListener('scroll', updateDropdownPosition, true);
-      return () => {
-        window.removeEventListener('resize', updateDropdownPosition);
-        window.removeEventListener('scroll', updateDropdownPosition, true);
-      };
-    }
-  }, [dropdownOpen, query, updateDropdownPosition]);
 
   useEffect(() => {
     if (isLocked) {
@@ -174,7 +148,6 @@ export default function CollectionLoanPicker({
       rows = dedupeById(rows);
       setSuggestions(rows);
       setDropdownOpen(true);
-      updateDropdownPosition();
 
       if (!rows.length) {
         setSearchError('No loans found. Try full mobile (10 digits), application ID, or borrower name.');
@@ -189,7 +162,7 @@ export default function CollectionLoanPicker({
     } finally {
       setSearching(false);
     }
-  }, [updateDropdownPosition]);
+  }, []);
 
   useEffect(() => {
     if (isLocked) return;
@@ -253,14 +226,7 @@ export default function CollectionLoanPicker({
     dropdownOpen && query.trim().length >= MIN_QUERY_LEN ? (
       <div
         data-collection-loan-dropdown
-        className="bg-white border border-slate-200 rounded-lg shadow-2xl overflow-hidden"
-        style={{
-          position: 'absolute',
-          top: dropdownPos.top,
-          left: dropdownPos.left,
-          width: dropdownPos.width,
-          zIndex: 9999,
-        }}
+        className="absolute left-0 right-0 top-full z-30 mt-1 bg-white border border-slate-200 rounded-lg shadow-2xl overflow-hidden"
       >
         {searching && visible.length === 0 ? (
           <p className="px-4 py-3 text-sm text-slate-500">Searching…</p>
@@ -269,7 +235,7 @@ export default function CollectionLoanPicker({
             {searchError || 'No matching loans found.'}
           </p>
         ) : (
-          <ul className="max-h-60 overflow-y-auto overscroll-contain divide-y divide-slate-50">
+          <ul className="max-h-80 overflow-y-auto overscroll-contain divide-y divide-slate-100">
             {visible.map((loan) => (
               <li key={loan.id}>
                 <button
@@ -277,15 +243,15 @@ export default function CollectionLoanPicker({
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handlePick(loan)}
                   className={cn(
-                    'w-full text-left px-4 py-3 flex items-center justify-between gap-3 transition-colors',
+                    'w-full text-left px-4 py-4 min-h-16 flex items-center justify-between gap-3 transition-colors',
                     styles.hover
                   )}
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-900 truncate">
+                    <p className="text-base font-semibold text-slate-900 truncate">
                       {loan.full_name || 'Borrower'}
                     </p>
-                    <p className="text-xs text-slate-500 truncate">
+                    <p className="text-sm text-slate-500 truncate">
                       {loan.application_number || `#${loan.id}`}
                       {loan.mobile ? ` · ${loan.mobile}` : ''}
                     </p>
@@ -384,7 +350,6 @@ export default function CollectionLoanPicker({
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
         <input
-          ref={inputRef}
           type="text"
           value={query}
           onChange={(e) => {
@@ -392,11 +357,9 @@ export default function CollectionLoanPicker({
             setSearchError('');
             if (e.target.value.trim().length >= MIN_QUERY_LEN) {
               setDropdownOpen(true);
-              updateDropdownPosition();
             }
           }}
           onFocus={() => {
-            updateDropdownPosition();
             if (query.trim().length >= MIN_QUERY_LEN) {
               setDropdownOpen(true);
               if (!suggestions.length && !searching) runSearch(query.trim());
@@ -444,9 +407,7 @@ export default function CollectionLoanPicker({
         </p>
       )}
 
-      {typeof document !== 'undefined' && dropdownPanel
-        ? createPortal(dropdownPanel, document.body)
-        : null}
+      {dropdownPanel}
     </div>
   );
 }
