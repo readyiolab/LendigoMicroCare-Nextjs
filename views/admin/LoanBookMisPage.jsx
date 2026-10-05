@@ -455,7 +455,7 @@ export default function LoanBookMisPage() {
         </div>
       )}
 
-      {tab === 'loan-book' && (
+      {tab === 'loan-book' && !error && (
       <div className="rounded-lg border border-slate-200 bg-white overflow-x-auto">
         {loading ? (
           <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
