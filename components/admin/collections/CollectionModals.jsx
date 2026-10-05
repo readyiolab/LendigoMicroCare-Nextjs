@@ -195,10 +195,21 @@ export function PenaltyModal({ penalty, onClose }) {
                       : `${penalty.daysOverdue || 0} day(s) late`
                 }
               />
-              <InfoRow icon={IndianRupee} label="Principal" value={`₹${parseFloat(penalty.principalAmount || 0).toLocaleString('en-IN')}`} />
+              <InfoRow icon={IndianRupee} label="Contract due" value={`₹${parseFloat(penalty.contractDue ?? penalty.principalAmount || 0).toLocaleString('en-IN')}`} />
+              {Number(penalty.partPaid) > 0 && (
+                <InfoRow icon={IndianRupee} label="Part paid" value={`₹${parseFloat(penalty.partPaid).toLocaleString('en-IN')}`} />
+              )}
+              <InfoRow icon={IndianRupee} label="Unpaid before fine" value={`₹${parseFloat(penalty.unpaidBeforeFine ?? penalty.principalAmount || 0).toLocaleString('en-IN')}`} />
               <InfoRow icon={IndianRupee} label="Late charges" value={`₹${parseFloat(penalty.totalPenalty || 0).toLocaleString('en-IN')}`} />
-              <InfoRow icon={TrendingUp} label="Rate" value={penalty.penaltyRate || '2% / day'} />
+              <InfoRow icon={TrendingUp} label="Rate" value={penalty.fineNote || penalty.penaltyRate || '2% per day on the unpaid balance'} />
             </div>
+            {Array.isArray(penalty.penaltySteps) && penalty.penaltySteps.length > 0 && (
+              <p className="px-4 pb-2 text-[11px] text-slate-500">
+                {penalty.penaltySteps
+                  .map((step) => `${step.days} day${Number(step.days) === 1 ? '' : 's'} on ₹${Number(step.balance).toLocaleString('en-IN')}`)
+                  .join(', then ')}
+              </p>
+            )}
             <div className="mx-4 mb-3 rounded-lg bg-red-50 border border-red-100 px-3 py-2 text-center">
               <p className="text-[9px] uppercase tracking-wider text-red-500 font-medium">Total to collect</p>
               <p className="text-xl font-bold text-red-700">₹{parseFloat(penalty.totalDue || 0).toLocaleString('en-IN')}</p>

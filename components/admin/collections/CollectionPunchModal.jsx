@@ -205,9 +205,15 @@ export default function CollectionPunchModal({ open, onOpenChange, loanApplicati
                 {' · '}
                 OS {formatInr(prefill.totalOutstanding)}
                 {' · '}
-                Prepaid {formatInr(prefill.prepaidTotal ?? 0)}
+                Part paid {formatInr(prefill.partPaymentBalance?.partPaid ?? prefill.prepaidTotal ?? 0)}
                 {' · '}
                 Payable today {formatInr(prefill.amountPayableAsOfToday ?? 0)}
+                {Number(prefill.partPaymentBalance?.lateCharge) > 0 && (
+                  <>
+                    {' · '}
+                    Late charge {formatInr(prefill.partPaymentBalance.lateCharge)} (2% per day on the unpaid balance)
+                  </>
+                )}
               </>
             ) : (
               'Submit payment for checker approval.'

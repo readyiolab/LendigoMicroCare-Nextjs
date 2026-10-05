@@ -47,6 +47,48 @@ const inr = (v) => {
   return `₹${n.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 };
 
+function formatDay(value) {
+  if (!value) return '';
+  const raw = String(value).slice(0, 10);
+  const [year, month, day] = raw.split('-').map(Number);
+  if (!year || !month || !day) return '';
+  return new Date(year, month - 1, day).toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function fineStepText(steps) {
+  if (!Array.isArray(steps) || !steps.length) return '';
+  return steps
+    .map((step) => `${step.days} day${Number(step.days) === 1 ? '' : 's'} on ${inr(step.balance)}`)
+    .join(', then ');
+}
+
+function FlatFineBreakdown({ fine }) {
+  if (!fine || Number(fine.contractDue) <= 0) return null;
+  const paidOn = formatDay(fine.partPaidOn);
+  const steps = fineStepText(fine.steps);
+  return (
+    <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 space-y-1">
+      <p>Contract due <span className="font-semibold tabular-nums">{inr(fine.contractDue)}</span></p>
+      <p>
+        Part paid <span className="font-semibold tabular-nums text-emerald-700">{inr(fine.partPaid)}</span>
+        {paidOn ? ` on ${paidOn}` : ''}
+      </p>
+      <p>Unpaid before fine <span className="font-semibold tabular-nums">{inr(fine.unpaidBeforeFine)}</span></p>
+      <p>
+        Late charge <span className="font-semibold tabular-nums text-red-600">{inr(fine.lateCharge)}</span>
+        {' · '}
+        {fine.fineNote || '2% per day on the unpaid balance'}
+      </p>
+      {steps && <p className="text-slate-500">{steps}</p>}
+      <p>Payable today <span className="font-bold tabular-nums text-slate-900">{inr(fine.payable)}</span></p>
+    </div>
+  );
+}
+
 function formatDate(value) {
   if (!value) return '—';
   const d = new Date(value);
@@ -327,7 +369,7 @@ export default function Account360Page() {
               )}
             </div>
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Prepaid</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Part paid</p>
               <p className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">
                 {inr(financials?.prepaidTotal ?? 0)}
               </p>
@@ -343,6 +385,7 @@ export default function Account360Page() {
               <p><span className="text-slate-500">City:</span> {customer?.city || '—'}</p>
             </div>
           </div>
+          <FlatFineBreakdown fine={financials?.interest?.flatFine} />
 
           <div className="flex flex-wrap gap-2">
             {account.status === 'disbursed' && (

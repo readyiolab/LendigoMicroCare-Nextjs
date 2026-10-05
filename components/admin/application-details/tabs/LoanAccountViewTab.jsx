@@ -107,6 +107,59 @@ function DisbursementDetailsPanel({ d, fields, bankEdit }) {
 
 function InterestBreakdownPanel({ interest, fields }) {
   if (!interest) return null;
+  const fine = interest.flatFine;
+  if (fine) {
+    const paidOn = fine.partPaidOn
+      ? new Date(`${String(fine.partPaidOn).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        })
+      : '';
+    const steps = Array.isArray(fine.steps)
+      ? fine.steps
+          .map((step) => `${step.days} day${Number(step.days) === 1 ? '' : 's'} on ${inr(step.balance)}`)
+          .join(', then ')
+      : '';
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <DetailTable title="Amount due today">
+          <DetailRow label="Contract due" mono>{inr(fine.contractDue)}</DetailRow>
+          <DetailRow label="Part paid" mono>
+            <span className="text-emerald-700 font-bold">
+              {inr(fine.partPaid)}
+              {paidOn ? ` on ${paidOn}` : ''}
+            </span>
+          </DetailRow>
+          <DetailRow label="Unpaid before fine" mono>{inr(fine.unpaidBeforeFine)}</DetailRow>
+          {fields?.showPenalty !== false && (
+            <DetailRow label="Late charge" mono>
+              <span className="text-red-600 font-bold">{inr(fine.lateCharge)}</span>
+            </DetailRow>
+          )}
+          <DetailRow label="How the fine works">
+            {fine.fineNote || '2% per day on the unpaid balance'}
+          </DetailRow>
+          {steps && <DetailRow label="Fine split">{steps}</DetailRow>}
+          <DetailRow label="Payable today" mono>
+            <span className="font-bold text-slate-900">{inr(fine.payable)}</span>
+          </DetailRow>
+        </DetailTable>
+        <DetailTable title="Payment Summary">
+          <DetailRow label="Total Paid" mono>
+            <span className="text-emerald-600 font-bold">{inr(interest.totalPaid)}</span>
+          </DetailRow>
+          <DetailRow label="Payable today" mono>
+            <span className="font-bold text-slate-900">{inr(fine.payable)}</span>
+          </DetailRow>
+          <DetailRow label="Loan Status">
+            <span className="font-bold">{interest.loanStatus}</span>
+          </DetailRow>
+          <DetailRow label="Total Discount" mono>{interest.totalDiscount ?? 0}</DetailRow>
+        </DetailTable>
+      </div>
+    );
+  }
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
       <DetailTable title="Actual Calculation (Till Date)">
@@ -242,7 +295,9 @@ function StatementOfAccountPanel({ statement, fields }) {
       </div>
 
       <div className="rounded-lg bg-[#1d4ed8] text-white px-4 py-3 shadow-md max-w-xs">
-        <p className="text-[12px] font-medium text-blue-100">Total payable (on repayment date)</p>
+        <p className="text-[12px] font-medium text-blue-100">
+          {statement.totalPayableLabel || 'Total payable (on repayment date)'}
+        </p>
         <p className="text-xl font-bold tabular-nums">{inrFixed(statement.totalPayable)}</p>
       </div>
 

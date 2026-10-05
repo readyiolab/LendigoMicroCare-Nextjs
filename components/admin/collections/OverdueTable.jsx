@@ -378,12 +378,28 @@ export default function OverdueTable({
                   </p>
                 </TableCell>
                 <TableCell className="text-sm font-medium tabular-nums">
-                  {formatInr(r.principal_due)}
+                  <p>{formatInr(r.unpaidBeforeFine ?? r.principal_due)}</p>
+                  {Number(r.partPaid) > 0 && (
+                    <p className="text-[10px] text-slate-500 mt-0.5">
+                      Contract {formatInr(r.contractDue ?? r.principal_due)}
+                      {' · '}
+                      Part paid {formatInr(r.partPaid)}
+                      {r.partPaidOn ? ` on ${format(new Date(`${String(r.partPaidOn).slice(0, 10)}T00:00:00`), 'dd MMM yyyy')}` : ''}
+                    </p>
+                  )}
                 </TableCell>
                 <TableCell>
                   <p className="text-sm font-medium tabular-nums text-red-600">
                     +{formatInr(r.calculated_penalty)}
                   </p>
+                  <p className="text-[10px] text-slate-400">2% per day on the unpaid balance</p>
+                  {Array.isArray(r.penaltySteps) && r.penaltySteps.length > 1 && (
+                    <p className="text-[10px] text-slate-500">
+                      {r.penaltySteps
+                        .map((step) => `${step.days}d on ${formatInr(step.balance)}`)
+                        .join(', then ')}
+                    </p>
+                  )}
                   <p className="text-xs text-slate-500 tabular-nums">
                     Total {formatInr(r.total_due_with_penalty)}
                   </p>

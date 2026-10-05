@@ -461,7 +461,13 @@ export default function AdminCollections() {
         collectionStage: row.collection_stage,
         totalPenalty: row.calculated_penalty,
         totalDue: row.total_due_with_penalty,
-        penaltyRate: row.penalty_rate || '2% / day',
+        penaltyRate: row.penalty_rate || '2% per day on the unpaid balance',
+        contractDue: row.contractDue,
+        partPaid: row.partPaid,
+        partPaidOn: row.partPaidOn,
+        unpaidBeforeFine: row.unpaidBeforeFine,
+        penaltySteps: row.penaltySteps,
+        fineNote: row.fineNote,
       });
       return;
     }
