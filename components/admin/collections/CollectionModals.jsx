@@ -195,11 +195,11 @@ export function PenaltyModal({ penalty, onClose }) {
                       : `${penalty.daysOverdue || 0} day(s) late`
                 }
               />
-              <InfoRow icon={IndianRupee} label="Contract due" value={`₹${parseFloat(penalty.contractDue ?? penalty.principalAmount || 0).toLocaleString('en-IN')}`} />
+              <InfoRow icon={IndianRupee} label="Contract due" value={`₹${parseFloat(penalty.contractDue ?? penalty.principalAmount ?? 0).toLocaleString('en-IN')}`} />
               {Number(penalty.partPaid) > 0 && (
                 <InfoRow icon={IndianRupee} label="Part paid" value={`₹${parseFloat(penalty.partPaid).toLocaleString('en-IN')}`} />
               )}
-              <InfoRow icon={IndianRupee} label="Unpaid before fine" value={`₹${parseFloat(penalty.unpaidBeforeFine ?? penalty.principalAmount || 0).toLocaleString('en-IN')}`} />
+              <InfoRow icon={IndianRupee} label="Unpaid before fine" value={`₹${parseFloat(penalty.unpaidBeforeFine ?? penalty.principalAmount ?? 0).toLocaleString('en-IN')}`} />
               <InfoRow icon={IndianRupee} label="Late charges" value={`₹${parseFloat(penalty.totalPenalty || 0).toLocaleString('en-IN')}`} />
               <InfoRow icon={TrendingUp} label="Rate" value={penalty.fineNote || penalty.penaltyRate || '2% per day on the unpaid balance'} />
             </div>
