@@ -353,7 +353,7 @@ export default function Account360Page() {
               <p className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">
                 {inr(financials?.totalOutstanding)}
               </p>
-              {account.status === 'closed' && (
+              {['closed', 'settlement_closed'].includes(account.status) && (
                 <p className="text-xs text-slate-500 mt-1">Loan closed · nothing due</p>
               )}
             </div>
@@ -603,6 +603,13 @@ export default function Account360Page() {
                   {data.noc?.issuedAt && (
                     <p className="text-slate-600 mt-1">Issued on {formatDate(data.noc.issuedAt)}</p>
                   )}
+                  {data.noc?.settlementLetterUrl && (
+                    <Button size="sm" variant="outline" className="mt-3 mr-2" asChild>
+                      <a href={data.noc.settlementLetterUrl} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="w-3.5 h-3.5 mr-1" /> Download settlement letter
+                      </a>
+                    </Button>
+                  )}
                   {data.noc?.downloadUrl && (
                     <Button size="sm" className="mt-3" asChild>
                       <a href={data.noc.downloadUrl} target="_blank" rel="noopener noreferrer">
@@ -610,12 +617,12 @@ export default function Account360Page() {
                       </a>
                     </Button>
                   )}
-                  {account.status === 'closed' && data.noc?.status === 'scheduled' && (
+                  {['closed', 'settlement_closed'].includes(account.status) && data.noc?.status === 'scheduled' && (
                     <p className="text-xs text-amber-700 mt-2 flex items-center gap-1">
                       <FileText className="w-3.5 h-3.5" /> NOC is scheduled and will be sent to the customer after the cooling period. If the customer needs it urgently, you can generate it now.
                     </p>
                   )}
-                  {account.status === 'closed' && data.noc?.status !== 'issued' && (
+                  {['closed', 'settlement_closed'].includes(account.status) && data.noc?.status !== 'issued' && (
                     <Button size="sm" className="mt-3" disabled={submitting} onClick={handleIssueNoc}>
                       <FileText className="w-3.5 h-3.5 mr-1" /> {submitting ? 'Generating…' : 'Generate NOC now'}
                     </Button>

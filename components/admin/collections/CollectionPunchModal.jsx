@@ -109,11 +109,10 @@ export default function CollectionPunchModal({ open, onOpenChange, loanApplicati
   }, [open, loanApplicationId]);
 
   const typeOptions = useMemo(() => {
-    const allowed = prefill?.allowedCollectionTypes || ['full_payment', 'part_payment', 'prepayment'];
+    const allowed = prefill?.allowedCollectionTypes || ['full_payment', 'part_payment', 'prepayment', 'settlement'];
     return allowed.map((value) => ({
       value,
       label: COLLECTION_TYPE_LABELS[value] || value,
-      disabled: value === 'settlement' && !prefill?.approvedSettlement,
     }));
   }, [prefill]);
 
@@ -278,6 +277,11 @@ export default function CollectionPunchModal({ open, onOpenChange, loanApplicati
               {collectionType === 'prepayment' && (
                 <p className="text-[10px] text-slate-500 leading-snug">
                   Amount is Payable today (foreclosure). On approval the loan account will be closed.
+                </p>
+              )}
+              {collectionType === 'settlement' && (
+                <p className="text-[10px] text-slate-500 leading-snug">
+                  On approval the loan is closed as a settlement and a settlement letter is emailed to the customer.
                 </p>
               )}
             </div>

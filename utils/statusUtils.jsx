@@ -120,6 +120,7 @@ export const STATUS_BADGE_CONFIG = {
     className: 'bg-green-600 text-white border-green-600',
   },
   closed: { variant: 'secondary', label: 'Loan Closed', className: 'bg-gray-100 text-gray-600' },
+  settlement_closed: { variant: 'secondary', label: 'Settlement closed', className: 'bg-gray-100 text-gray-600' },
   defaulted: { variant: 'destructive', label: 'Defaulted', className: 'bg-red-600 text-white' },
 };
 
@@ -133,7 +134,7 @@ export function resolveApplicationDisplayStatus(applicationStatus, mandateStatus
   const status = String(applicationStatus || '').toLowerCase();
   const mandate = String(mandateStatus || '').toLowerCase();
 
-  if (status === 'disbursed' || status === 'closed' || status === 'defaulted') {
+  if (status === 'disbursed' || status === 'closed' || status === 'settlement_closed' || status === 'defaulted') {
     return status;
   }
 
