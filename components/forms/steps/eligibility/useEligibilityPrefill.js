@@ -67,10 +67,7 @@ export function useEligibilityPrefill({
 
            const nextEmail = getVal('personal_email', 'personalEmail');
            const nextMobile = getVal('mobile');
-           setIsEmailVerified(
-             getVal('personal_email_verified', 'personalEmailVerified') === 1 ||
-             resolvePersonalEmailVerified(authUser, p, nextEmail)
-           );
+           setIsEmailVerified(resolvePersonalEmailVerified(authUser, p, nextEmail));
            setIsMobileVerified(resolveMobileVerified(authUser, nextMobile));
 
            if (p.wf_status) {

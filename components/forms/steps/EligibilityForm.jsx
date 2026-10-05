@@ -319,7 +319,7 @@ export default function EligibilityForm({
       return;
     }
 
-    if (!isEmailVerified) {
+    if (!isAdminMode && !isEmailVerified) {
       setFieldErrors((prev) => ({
         ...prev,
         personalEmail: 'Please verify your email address before continuing.',
@@ -353,18 +353,21 @@ export default function EligibilityForm({
         setSuccess('Eligibility criteria met!');
         if (onSuccess) onSuccess(response.data);
       } else {
-        handleFormError(
-          { message: response.message, errors: response.errors },
-          setFieldErrors,
-          setError
-        );
+        const rejected = { message: response.message, errors: response.errors };
+        handleFormError(rejected, setFieldErrors, setError);
+        const emailMsg = String(
+          processApiError(rejected).fieldErrors.personalEmail || response.message || ''
+        ).toLowerCase();
+        if (emailMsg.includes('linked with another') || emailMsg.includes('verify your email')) {
+          setIsEmailVerified(false);
+        }
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (err) {
       const { fieldErrors: apiFieldErrors } = processApiError(err);
       handleFormError(err, setFieldErrors, setError);
       const emailMsg = String(apiFieldErrors.personalEmail || '').toLowerCase();
-      if (emailMsg.includes('linked with another')) {
+      if (emailMsg.includes('linked with another') || emailMsg.includes('verify your email')) {
         setIsEmailVerified(false);
       }
 
@@ -497,6 +500,7 @@ export default function EligibilityForm({
               handleInputChange={handleInputChange}
               fieldErrors={fieldErrors}
               isEmailVerified={isEmailVerified}
+              isAdminMode={isAdminMode}
               isMobileVerified={isMobileVerified}
               onVerifyEmail={handleOpenEmailVerify}
               onVerifyMobile={
@@ -537,7 +541,8 @@ export default function EligibilityForm({
           onSuccess={() => {
             setIsEmailVerified(true);
             setFieldErrors((prev) => {
-              if (prev.personalEmail === EMAIL_TAKEN_MSG) {
+              const msg = String(prev.personalEmail || '');
+              if (msg === EMAIL_TAKEN_MSG || msg.toLowerCase().includes('verify your email')) {
                 const next = { ...prev };
                 delete next.personalEmail;
                 return next;

@@ -6,9 +6,12 @@ import { Spinner } from '@/components/ui/spinner';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, Lock, AlertCircle, ShieldCheck } from 'lucide-react';
 
-const PersonalInfoSection = memo(({ formData, handleInputChange, fieldErrors, isEmailVerified, isMobileVerified, onVerifyEmail, onVerifyMobile, emailCheckLoading, emailVerifyOpening, onEmailBlur, isReturningUser, workflowStatus, workflowDetails, smsOtpEnabled = false }) => {
+const PersonalInfoSection = memo(({ formData, handleInputChange, fieldErrors, isEmailVerified, isAdminMode = false, isMobileVerified, onVerifyEmail, onVerifyMobile, emailCheckLoading, emailVerifyOpening, onEmailBlur, isReturningUser, workflowStatus, workflowDetails, smsOtpEnabled = false }) => {
   const isPanEditable = workflowStatus === 'RETRY_ALLOWED' && workflowDetails.editableFields?.includes('pancard');
   const isNameEditable = workflowStatus === 'RETRY_ALLOWED' && workflowDetails.editableFields?.includes('fullName');
+  const emailFieldError = isAdminMode && String(fieldErrors.personalEmail || '').toLowerCase().includes('verify your email')
+    ? ''
+    : fieldErrors.personalEmail;
 
   return (
   <div className="space-y-4">
@@ -118,29 +121,33 @@ const PersonalInfoSection = memo(({ formData, handleInputChange, fieldErrors, is
                       placeholder="name@example.com"
                       required
                       readOnly={isEmailVerified}
-                      className={`h-9 text-sm border-zinc-200 focus:ring-zinc-900 flex-1 ${fieldErrors.personalEmail ? "border-red-500" : ""} ${isEmailVerified ? "bg-gray-50 text-gray-500 cursor-not-allowed" : "bg-white"}`}
+                      className={`h-9 text-sm border-zinc-200 focus:ring-zinc-900 flex-1 ${emailFieldError ? "border-red-500" : ""} ${isEmailVerified ? "bg-gray-50 text-gray-500 cursor-not-allowed" : "bg-white"}`}
                   />
-                  {formData.personalEmail && (
-                      isEmailVerified ? (
-                          <Badge className="h-9 px-3 bg-green-50 text-green-700 border-green-200 hover:bg-green-100">
-                              <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                              Verified
-                          </Badge>
-                      ) : (
-                          <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              disabled={emailVerifyOpening || fieldErrors.personalEmail === 'This email is already linked with another account. Please use a different email address.'}
-                              className="h-9 px-3 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 font-bold disabled:opacity-50"
-                              onClick={onVerifyEmail}
-                          >
-                              {(emailVerifyOpening || emailCheckLoading) ? <Spinner className="w-4 h-4" /> : 'Verify'}
-                          </Button>
-                      )
+                  {formData.personalEmail && isEmailVerified && (
+                      <Badge className="h-9 px-3 bg-green-50 text-green-700 border-green-200 hover:bg-green-100">
+                          <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                          Verified
+                      </Badge>
+                  )}
+                  {formData.personalEmail && !isEmailVerified && !isAdminMode && (
+                      <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={emailVerifyOpening || fieldErrors.personalEmail === 'This email is already linked with another account. Please use a different email address.'}
+                          className="h-9 px-3 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 font-bold disabled:opacity-50"
+                          onClick={onVerifyEmail}
+                      >
+                          {(emailVerifyOpening || emailCheckLoading) ? <Spinner className="w-4 h-4" /> : 'Verify'}
+                      </Button>
                   )}
               </div>
-              {fieldErrors.personalEmail && <p className="text-red-500 text-[11px] font-medium flex items-center gap-1 mt-1"><AlertCircle className="w-3.5 h-3.5" /> {fieldErrors.personalEmail}</p>}
+              {emailFieldError && <p className="text-red-500 text-[11px] font-medium flex items-center gap-1 mt-1"><AlertCircle className="w-3.5 h-3.5" /> {emailFieldError}</p>}
+              {isAdminMode && !isEmailVerified && (
+                <p className="text-[11px] text-slate-500 leading-snug mt-1">
+                  The telecaller confirms this email when you continue. The customer does not need to enter a code.
+                </p>
+              )}
           </div>
 
           <div className="space-y-1.5">
