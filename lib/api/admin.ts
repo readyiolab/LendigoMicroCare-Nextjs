@@ -146,6 +146,23 @@ export const adminAPI = {
     return response;
   },
 
+  getPaydayDecision: (applicationRef: Id) =>
+    apiClient.get('/underwriting/decisions', {
+      params: { loan_application_id: applicationRef },
+    }),
+
+  runPaydayDecision: (
+    applicationRef: Id,
+    { refresh = false, refresh_reason }: { refresh?: boolean; refresh_reason?: string } = {}
+  ) =>
+    apiClient.post('/underwriting/decisions', {
+      loan_application_id: applicationRef,
+      ...(refresh ? { refresh: true, refresh_reason } : {}),
+    }),
+
+  getPaydayDecisionDetail: (id: Id) =>
+    apiClient.get(`/underwriting/decisions/${encodeURIComponent(id)}`),
+
   // CRIF Test Tool — standalone live pull for admin testing
   crifTestLookup: (mobile: string) =>
     apiClient.post('/admin/bre/crif-test/lookup', { mobile }),

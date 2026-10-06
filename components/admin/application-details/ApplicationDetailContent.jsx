@@ -41,6 +41,7 @@ const LoanBreakdownTab = lazy(() => import('./tabs/LoanBreakdownTab'));
 const DisbursementTab = lazy(() => import('./tabs/DisbursementTab'));
 const LoanAccountViewTab = lazy(() => import('./tabs/LoanAccountViewTab'));
 const BRETab = lazy(() => import('./tabs/BRETab'));
+const PaydayDecisionTab = lazy(() => import('./tabs/PaydayDecisionTab'));
 const AaReportTab = lazy(() => import('./tabs/AaReportTab'));
 const CrifReportTab = lazy(() => import('./tabs/CrifReportTab'));
 const CreditVerificationTab = lazy(() => import('../CreditVerificationTab'));
@@ -113,7 +114,7 @@ const PRIMARY_NAV_GROUPS = [
     label: 'CIBIL Bureau',
     subtabs: [
       { id: 'crif', label: 'CIBIL Bureau' },
-      { id: 'bre', label: 'Credit Rules' },
+      { id: 'payday', label: 'Payday decision' },
     ],
   },
   {
@@ -814,6 +815,7 @@ export default function ApplicationDetailContent() {
                                     {activeTab === 'verification' && <CreditVerificationTab />}
                                     {(activeTab === 'kyc' || activeTab === 'digio_kyc') && <DigitapKycTab />}
                                     {activeTab === 'bre' && <BRETab />}
+                                    {activeTab === 'payday' && <PaydayDecisionTab />}
                                     {activeTab === 'aa' && (
                                         <AaReportTab onOpenCreditCheck={openCreditCheck} />
                                     )}

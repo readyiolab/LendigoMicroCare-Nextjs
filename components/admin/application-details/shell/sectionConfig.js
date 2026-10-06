@@ -12,6 +12,7 @@ import {
   PieChart,
   CheckCircle2,
   UserCheck,
+  Wallet,
 } from 'lucide-react';
 import { hasPermission } from '@/lib/permissionUtils';
 
@@ -29,6 +30,7 @@ export const SECTION_META = {
   digio_kyc: { label: 'KYC Check', icon: ShieldCheck, group: 'evidence' },
   verification: { label: 'Video Declaration', icon: UserCheck, group: 'evidence' },
   bre: { label: 'Credit Rules', icon: Activity, group: 'risk' },
+  payday: { label: 'Payday decision', icon: Wallet, group: 'risk' },
   aa: { label: 'Bank Statement', icon: FileText, group: 'evidence' },
   crif: { label: 'CIBIL Bureau', icon: Activity, group: 'risk' },
   call_logs: { label: 'Call Logs', icon: Phone, group: 'ops' },
@@ -66,6 +68,7 @@ export const SECTION_PERMISSION_CODE = {
   digio_kyc: 'case.digio_kyc',
   verification: 'case.verification',
   bre: 'case.bre',
+  payday: 'risk.uw_decisions',
   call_logs: 'case.call_logs',
   history: 'case.history',
   repayments: 'case.repayments',
@@ -82,25 +85,25 @@ function getRoleSectionIds(role, isRepaymentReview) {
     return ['overview', 'loan_history', 'documents', 'call_logs', 'journey'];
   }
   if (r === 'credit_manager') {
-    return ['overview', 'loan_history', 'documents', 'cam', 'verification', 'kyc', 'bre', 'aa', 'crif', 'call_logs', 'history', 'loan_account', 'actions'];
+    return ['overview', 'loan_history', 'documents', 'cam', 'verification', 'kyc', 'payday', 'aa', 'crif', 'call_logs', 'history', 'loan_account', 'actions'];
   }
   if (r === 'collection_manager') {
     return ['overview', 'loan_history', 'documents', 'kyc', 'verification', 'repayments', 'loan_account', 'history'];
   }
   if (r === 'underwriter') {
     return [
-      'overview', 'loan_history', 'documents', 'cam', 'verification', 'kyc', 'bre', 'aa', 'crif',
+      'overview', 'loan_history', 'documents', 'cam', 'verification', 'kyc', 'payday', 'aa', 'crif',
       'history', 'journey', 'repayments', 'disbursement', 'loan_account', 'actions',
     ];
   }
   if (r === 'operations' || r === 'operations_manager') {
     return [
-      'overview', 'loan_history', 'documents', 'cam', 'verification', 'kyc', 'bre', 'aa', 'crif',
+      'overview', 'loan_history', 'documents', 'cam', 'verification', 'kyc', 'payday', 'aa', 'crif',
       'history', 'repayments', 'disbursement', 'loan_account', 'actions',
     ];
   }
   return [
-    'overview', 'loan_history', 'documents', 'cam', 'verification', 'kyc', 'bre', 'aa', 'crif',
+    'overview', 'loan_history', 'documents', 'cam', 'verification', 'kyc', 'payday', 'aa', 'crif',
     'history', 'call_logs', 'journey', 'repayments', 'disbursement', 'loan_account', 'actions',
   ];
 }
@@ -112,7 +115,7 @@ function getCustomSectionIds(permissionMap, isRepaymentReview) {
 
   const ids = [];
   for (const [sectionId, code] of Object.entries(SECTION_PERMISSION_CODE)) {
-    if (sectionId === 'digio_kyc') continue;
+    if (sectionId === 'digio_kyc' || sectionId === 'bre') continue;
     if (!hasPermission(permissionMap, code, 'can_view')) continue;
     const normalized = normalizeSectionId(sectionId);
     if (!ids.includes(normalized)) ids.push(normalized);
