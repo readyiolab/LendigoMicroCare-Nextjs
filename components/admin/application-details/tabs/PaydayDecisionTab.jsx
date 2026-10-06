@@ -5,11 +5,18 @@ import { Spinner } from '@/components/ui/spinner';
 import { adminAPI } from '@/lib/api/admin';
 import { useApplicationContext } from '../context/ApplicationContext';
 
-const OUTCOME_LABELS = {
-  APPROVE: 'Approve',
-  APPROVE_REDUCED: 'Approve reduced',
-  REFER: 'Refer',
-  DECLINE: 'Decline',
+const OUTCOME_HEADLINE = {
+  APPROVE: 'Offer the amount asked.',
+  APPROVE_REDUCED: 'Offer a lower amount.',
+  REFER: 'A person should review this before anyone offers a loan.',
+  DECLINE: 'Do not offer this loan.',
+};
+
+const OUTCOME_BADGE = {
+  APPROVE: 'Offer',
+  APPROVE_REDUCED: 'Lower offer',
+  REFER: 'Needs a person',
+  DECLINE: 'Do not offer',
 };
 
 const OUTCOME_CLASS = {
@@ -19,23 +26,36 @@ const OUTCOME_CLASS = {
   DECLINE: 'border-rose-200 bg-rose-50 text-rose-800',
 };
 
-const CAP_LABELS = {
-  SALARY_PCT: 'Salary limit',
-  OBLIGATION: 'Existing loan payments',
-  PRODUCT: 'Product maximum',
-  LADDER: 'Repeat-loan ladder',
-  BALANCE: 'Bank balance',
-  NTC: 'New-to-credit limit',
-  TICKET: 'Maximum ticket',
+const STAFF_PLAIN = {
+  R_AGE_OUT_OF_RANGE: 'The customer’s age is outside the ages we lend to.',
+  R_WRITE_OFF: 'A credit account was written off.',
+  R_SEVERE_DELINQUENCY: 'A credit account is 90 or more days late in the last 2 years.',
+  R_FRAUD: 'This customer is on a blocked or fraud list.',
+  R_DUPLICATE_IDENTITY: 'The PAN, mobile, or device is already linked to another customer.',
+  R_NON_SERVICEABLE: 'We do not lend in this location.',
+  R_HIGH_ENQUIRIES: 'There are many recent credit enquiries.',
+  R_NTC_HIGH_TICKET: 'This customer is new to credit and asked for a high amount.',
+  R_INCOME_VARIANCE: 'The salary credits vary more than we allow without a person looking.',
+  R_BUREAU_UNAVAILABLE: 'We could not read the credit report.',
+  R_BUREAU_STALE: 'The credit report is too old.',
+  R_AA_UNAVAILABLE: 'We could not read the bank statement.',
+  R_AA_STALE: 'The bank statement is too old.',
+  R_PROFILE_INCOMPLETE: 'Age or another required detail is missing.',
+  R_POLICY_MISSING: 'We do not have a limit rule for this risk grade.',
+  R_BAND_E: 'The risk grade is too weak to offer a loan.',
+  R_BAND_D: 'This risk grade needs a person to review it before an offer.',
+  R_INSUFFICIENT_CAPACITY: 'The amount we can offer is below the smallest loan we give.',
 };
 
-const DATA_STATUS_LABELS = {
-  ok: 'Fresh enough to decide',
-  bureau_unavailable: 'Credit bureau missing',
-  bureau_stale: 'Credit bureau is out of date',
-  aa_unavailable: 'Bank data missing',
-  aa_stale: 'Bank data is out of date',
+const DATA_STATUS_SENTENCE = {
+  ok: 'The credit report and bank statement were fresh enough to decide.',
+  bureau_unavailable: 'We could not read the credit report.',
+  bureau_stale: 'The credit report is out of date.',
+  aa_unavailable: 'We could not read the bank statement.',
+  aa_stale: 'The bank statement is out of date.',
 };
+
+const CAP_ORDER = ['SALARY_PCT', 'OBLIGATION', 'PRODUCT', 'LADDER', 'BALANCE', 'NTC', 'TICKET'];
 
 function money(value) {
   if (value == null || value === '') return '—';
@@ -56,13 +76,20 @@ function describeError(err) {
   return message || 'Could not load the payday decision.';
 }
 
-function Field({ label, value }) {
-  return (
-    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-slate-900">{value}</p>
-    </div>
-  );
+function staffReason(row) {
+  return STAFF_PLAIN[row.code] || row.internal_text || row.customer_text || row.code;
+}
+
+function capSentence(key, amount) {
+  const shown = money(amount);
+  if (key === 'SALARY_PCT') return `From salary: ${shown}`;
+  if (key === 'OBLIGATION') return `After existing loan payments: ${shown}`;
+  if (key === 'PRODUCT') return `For this risk grade: up to ${shown}`;
+  if (key === 'LADDER') return `From loans already repaid with us: up to ${shown}`;
+  if (key === 'BALANCE') return `From the average bank balance, not today’s account balance: up to ${shown}`;
+  if (key === 'NTC') return `For a customer new to credit: up to ${shown}`;
+  if (key === 'TICKET') return `The highest loan we offer: ${shown}`;
+  return shown;
 }
 
 export default function PaydayDecisionTab() {
@@ -75,7 +102,6 @@ export default function PaydayDecisionTab() {
   const [error, setError] = useState('');
   const [showRerun, setShowRerun] = useState(false);
   const [reason, setReason] = useState('');
-  const [capsOpen, setCapsOpen] = useState(false);
   const [caps, setCaps] = useState(null);
   const [capsLoading, setCapsLoading] = useState(false);
 
@@ -87,7 +113,6 @@ export default function PaydayDecisionTab() {
       const res = await adminAPI.getPaydayDecision(applicationRef);
       setDecision(res?.data || null);
       setCaps(null);
-      setCapsOpen(false);
     } catch (err) {
       setDecision(null);
       setError(describeError(err));
@@ -100,6 +125,25 @@ export default function PaydayDecisionTab() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    if (!decision?.id) return undefined;
+    let cancelled = false;
+    setCapsLoading(true);
+    adminAPI.getPaydayDecisionDetail(decision.id)
+      .then((res) => {
+        if (!cancelled) setCaps(res?.data?.caps || {});
+      })
+      .catch((err) => {
+        if (!cancelled) setError(describeError(err));
+      })
+      .finally(() => {
+        if (!cancelled) setCapsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [decision?.id]);
+
   async function run(refresh) {
     if (!applicationRef || running) return;
     setRunning(true);
@@ -110,28 +154,12 @@ export default function PaydayDecisionTab() {
         : {});
       setDecision(res?.data?.decision || null);
       setCaps(null);
-      setCapsOpen(false);
       setShowRerun(false);
       setReason('');
     } catch (err) {
       setError(describeError(err));
     } finally {
       setRunning(false);
-    }
-  }
-
-  async function toggleCaps() {
-    const next = !capsOpen;
-    setCapsOpen(next);
-    if (!next || caps || !decision?.id) return;
-    setCapsLoading(true);
-    try {
-      const res = await adminAPI.getPaydayDecisionDetail(decision.id);
-      setCaps(res?.data?.caps || {});
-    } catch (err) {
-      setError(describeError(err));
-    } finally {
-      setCapsLoading(false);
     }
   }
 
@@ -145,9 +173,14 @@ export default function PaydayDecisionTab() {
 
   const outcome = decision?.outcome;
   const reasonLines = Array.isArray(decision?.reason_codes) ? decision.reason_codes : [];
+  const stoppedByKnockout = reasonLines.some((row) => row.stage === 'knockout');
   const capEntries = caps
-    ? Object.entries(CAP_LABELS).filter(([key]) => caps[key] != null)
+    ? CAP_ORDER.filter((key) => caps[key] != null).map((key) => ({ key, amount: caps[key] }))
     : [];
+  const bindingAmount = decision?.binding_constraint && caps
+    ? Number(caps[decision.binding_constraint])
+    : null;
+  const offerWouldBeZero = stoppedByKnockout && outcome === 'DECLINE' && bindingAmount === 0;
 
   return (
     <div className="space-y-4 p-4 sm:p-6">
@@ -171,43 +204,82 @@ export default function PaydayDecisionTab() {
             {running ? 'Running…' : 'Run payday decision'}
           </Button>
         </div>
-      ) : (
+      ) : decision ? (
         <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-2">
               <Badge className={OUTCOME_CLASS[outcome] || 'border-slate-200 bg-white text-slate-800'}>
-                {OUTCOME_LABELS[outcome] || outcome || 'Decision'}
+                {OUTCOME_BADGE[outcome] || outcome || 'Decision'}
               </Badge>
-              <span className="text-xs text-slate-500">Attempt {decision.attempt_no}</span>
+              <h2 className="text-lg font-semibold text-slate-900">
+                {OUTCOME_HEADLINE[outcome] || 'Payday decision'}
+              </h2>
+              <p className="text-xs text-slate-500">Run {decision.attempt_no}</p>
             </div>
             <Button variant="outline" disabled={running} onClick={() => setShowRerun((open) => !open)}>
               Re-run
             </Button>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <Field label="Sanction limit" value={money(decision.sanction_limit)} />
-            <Field label="Requested amount" value={money(decision.requested_amount)} />
-            <Field label="Band and score" value={`${decision.band || '—'} · ${decision.score ?? '—'}`} />
-            <Field label="Tenure" value={decision.tenure_days != null ? `${decision.tenure_days} days` : '—'} />
-            <Field label="ROI per day" value={decision.roi_per_day_pct != null ? `${decision.roi_per_day_pct}%` : '—'} />
-            <Field label="Processing fee" value={money(decision.processing_fee_amt)} />
-            <Field label="Limiting cap" value={CAP_LABELS[decision.binding_constraint] || decision.binding_constraint || '—'} />
-            <Field label="Data status" value={DATA_STATUS_LABELS[decision.data_status] || decision.data_status || '—'} />
+          <div className="space-y-2 text-sm text-slate-800">
+            <p className="font-medium text-slate-900">Why</p>
+            {reasonLines.length ? reasonLines.map((row) => (
+              <div key={row.code} className="space-y-1">
+                <p>{staffReason(row)}</p>
+                {row.customer_text ? (
+                  <p className="text-slate-600">What we would tell the customer: {row.customer_text}</p>
+                ) : null}
+              </div>
+            )) : (
+              <p>No extra reason was recorded.</p>
+            )}
+            {stoppedByKnockout ? (
+              <p>That stop happens before any amount is offered.</p>
+            ) : null}
           </div>
 
-          <div>
-            <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Reasons</p>
-            {reasonLines.length ? (
-              <ul className="mt-2 space-y-1 text-sm text-slate-800">
-                {reasonLines.map((row) => (
-                  <li key={row.code}>{row.customer_text || row.code}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-2 text-sm text-slate-600">No reason codes.</p>
-            )}
+          <p className="text-sm text-slate-800">
+            {DATA_STATUS_SENTENCE[decision.data_status] || 'We used the credit report and bank statement on file.'}
+          </p>
+
+          <div className="space-y-2 text-sm text-slate-800">
+            <p className="font-medium text-slate-900">What we could have offered</p>
+            <p>
+              The customer asked for {money(decision.requested_amount)}. We compare several ceilings and keep the lowest.
+            </p>
+            {capsLoading ? <Spinner className="h-5 w-5 text-primary" /> : null}
+            {!capsLoading && capEntries.length === 0 ? (
+              <p className="text-slate-600">The amount breakdown is not available.</p>
+            ) : null}
+            {capEntries.map((entry) => (
+              <p key={entry.key}>
+                {capSentence(entry.key, entry.amount)}
+                {decision.binding_constraint === entry.key
+                  ? ' This is the lowest, so this is the amount we can offer.'
+                  : ''}
+              </p>
+            ))}
+            {offerWouldBeZero ? (
+              <p>The stop declined the loan, and the existing payments would have left ₹0 anyway.</p>
+            ) : null}
           </div>
+
+          <p className="text-sm text-slate-800">
+            {`Risk grade ${decision.band || '—'}, score ${decision.score ?? '—'}. A is strongest and E is weakest.`}
+            {stoppedByKnockout
+              ? ' This grade did not decide the case, because the stop above already did.'
+              : ''}
+          </p>
+
+          <p className="text-sm text-slate-800">
+            {outcome === 'DECLINE' ? 'If the amount had been offered: ' : 'Offer terms: '}
+            repay in {decision.tenure_days != null ? `${decision.tenure_days} days` : '—'}
+            {', interest '}
+            {decision.roi_per_day_pct != null ? `${decision.roi_per_day_pct}% per day` : '—'}
+            {', fee '}
+            {money(decision.processing_fee_amt)}
+            .
+          </p>
 
           {showRerun ? (
             <div className="rounded-lg border border-slate-200 bg-white p-3">
@@ -231,31 +303,8 @@ export default function PaydayDecisionTab() {
               </Button>
             </div>
           ) : null}
-
-          <div>
-            <Button variant="outline" onClick={toggleCaps}>
-              {capsOpen ? 'Hide how the limit was worked out' : 'How the limit was worked out'}
-            </Button>
-            {capsOpen ? (
-              <div className="mt-3 space-y-2">
-                {capsLoading ? <Spinner className="h-5 w-5 text-primary" /> : null}
-                {!capsLoading && capEntries.length === 0 ? (
-                  <p className="text-sm text-slate-600">No cap amounts were stored.</p>
-                ) : null}
-                {capEntries.map(([key, label]) => (
-                  <div key={key} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
-                    <span className="text-slate-700">
-                      {label}
-                      {decision.binding_constraint === key ? ' (limiting)' : ''}
-                    </span>
-                    <span className="font-semibold text-slate-900">{money(caps[key])}</span>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
