@@ -650,8 +650,7 @@ export default function Account() {
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
-                    <Button onClick={handleUpdateProfile} disabled={editLoading}>
-                        {editLoading ? <Spinner className="w-4 h-4 mr-2" /> : null}
+                    <Button onClick={handleUpdateProfile} disabled={editLoading} loading={editLoading}>
                         Save Changes
                     </Button>
                 </DialogFooter>

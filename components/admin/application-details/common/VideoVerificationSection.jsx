@@ -48,12 +48,12 @@ const VideoVerificationSection = memo(({ onVerify, updating, canVerify = true, v
                     <Button 
                         className="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs h-9 relative z-20"
                         disabled={updating || !reason.trim()}
+                        loading={updating}
                         onClick={() => {
                             onVerify(false, reason.trim());
                         }}
                     >
-                        {updating ? <Spinner className="w-3 h-3 text-white mr-1" /> : null}
-                        {updating ? 'Rejecting...' : 'Confirm Reject'}
+                        Confirm Reject
                     </Button>
                     <Button 
                         variant="ghost" 
@@ -72,9 +72,10 @@ const VideoVerificationSection = memo(({ onVerify, updating, canVerify = true, v
                 <Button 
                     className="bg-green-600 hover:bg-green-700 text-white shadow-md w-full h-10 relative z-20"
                     disabled={updating}
+                    loading={updating}
                     onClick={() => onVerify(true)}
                 >
-                    {updating ? <Spinner className="w-4 h-4 mr-2 text-white" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
                     Verify & Next
                 </Button>
                 <Button 

@@ -366,10 +366,11 @@ export default function CallLogsSheet({
                 type="button"
                 onClick={handleSave}
                 disabled={!canSave}
+                loading={saving}
                 className="h-10 w-full rounded-lg bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
               >
-                {saving ? <Spinner className="mr-2 h-4 w-4" /> : <PhoneCall className="mr-2 h-4 w-4" />}
-                {saving ? 'Saving…' : 'Save call log'}
+                <PhoneCall className="mr-2 h-4 w-4" />
+                Save call log
               </Button>
             </section>
           ) : null}

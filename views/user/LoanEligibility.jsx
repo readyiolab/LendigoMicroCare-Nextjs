@@ -374,11 +374,12 @@ export default function LoanEligibility() {
 
             <Button 
                 type="submit" 
-                disabled={loading} 
+                disabled={loading}
+                loading={loading}
                 className="w-full h-11 text-base font-bold bg-white hover:bg-slate-100 text-white shadow-lg shadow-zinc-200 transition-all rounded-lg"
             >
-                {loading ? <Spinner className="text-white size-4" /> : 'Verify & Check Eligibility'}
-                {!loading && <ArrowRight className="ml-2 w-4 h-4" />}
+                Verify & Check Eligibility
+                <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
         </form>
       </div>

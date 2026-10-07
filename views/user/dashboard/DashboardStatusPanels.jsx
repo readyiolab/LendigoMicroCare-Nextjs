@@ -52,19 +52,12 @@ export function RejectedApplicationPanel({
               <Button
                 onClick={onStartApplication}
                 disabled={creatingApplication || creditEligibility?.allowed === false}
+                loading={creatingApplication}
                 size="sm"
                 variant="outline"
                 className="bg-white hover:bg-gray-50 text-gray-900 border-gray-200 shrink-0"
               >
-                {creatingApplication ? (
-                  <>
-                    <Spinner className="w-3.5 h-3.5 mr-2" /> Processing...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 mr-2" /> Re-apply
-                  </>
-                )}
+                <RefreshCw className="w-3.5 h-3.5 mr-2" /> Re-apply
               </Button>
             </div>
           </div>

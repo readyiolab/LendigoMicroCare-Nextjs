@@ -131,19 +131,13 @@ export default function LoanDetailsDialog({
           <Button
             onClick={onFinalSubmit}
             disabled={submittingFinal}
+            loading={submittingFinal}
             className="flex-[1.4] bg-[#222222] hover:bg-[#111111] text-white h-10 rounded-lg text-sm font-semibold shadow-md transition-all active:scale-[0.98]"
           >
-            {submittingFinal ? (
-              <span className="flex items-center justify-center gap-2">
-                <Spinner className="w-3.5 h-3.5 text-white" />
-                Submitting…
-              </span>
-            ) : (
-              <span className="flex items-center justify-center gap-1.5">
-                Apply Now
-                <ArrowRight className="w-3.5 h-3.5" />
-              </span>
-            )}
+            <span className="flex items-center justify-center gap-1.5">
+              Apply Now
+              <ArrowRight className="w-3.5 h-3.5" />
+            </span>
           </Button>
         </div>
       </DialogContent>
