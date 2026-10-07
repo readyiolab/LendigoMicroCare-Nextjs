@@ -287,6 +287,9 @@ export const adminAPI = {
   deleteApplicationReference: (applicationId: Id, referenceId: Id) =>
     apiClient.delete(`/admin/applications/${applicationId}/references/${referenceId}`),
 
+  lookupReferenceMobileName: (applicationId: Id, referenceId: Id) =>
+    apiClient.post(`/admin/applications/${applicationId}/references/${referenceId}/mobile-name-lookup`),
+
   updateApplicantProfile: (applicationId: Id, data: Payload) =>
     apiClient.patch(`/admin/applications/${applicationId}/applicant-profile`, data),
 
@@ -417,6 +420,8 @@ export const adminAPI = {
     apiClient.post(`/admin/users/${userId}/credit-policy/clear-cooloff`, data),
   restoreUserCreditEligibility: (userId: Id, data: Payload) =>
     apiClient.post(`/admin/users/${userId}/credit-policy/restore`, data),
+  getUserReloanStatus: (userId: Id) => apiClient.get(`/admin/users/${userId}/reloan`),
+  startUserReloan: (userId: Id) => apiClient.post(`/admin/users/${userId}/reloan`),
 
   // Super Admin Overrides
   updateSalaryDate: (userId: Id, data: Payload) =>

@@ -144,6 +144,7 @@ export default function Dashboard() {
   const videoUploadPromiseRef = useRef(null);
   const videoResultRef = useRef(null);
 
+  const [reloanLink, setReloanLink] = useState('');
   const [showLoanDetailsDialog, setShowLoanDetailsDialog] = useState(false);
   const [loanDetails, setLoanDetails] = useState({
      purpose: "personal",
@@ -165,8 +166,34 @@ export default function Dashboard() {
   });
 
   // ✅ AUTO-RESUME: Open the next incomplete step when user returns to dashboard
+  const reloanPhase = ['pending', 'submitting', 'failed'].includes(submittedApplication?.reloan_auto_submit)
+    && (submittedApplication?.application_status === 'draft' || submittedApplication?.status === 'draft');
+  const canReloan = Number(reapplicationData?.closedLoansCount || 0) > 0;
+
   useEffect(() => {
-    if (!initialLoadDone || showWelcome || loading || hasAutoResumed.current) return;
+    const phase = submittedApplication?.reloan_auto_submit;
+    if (phase !== 'pending' && phase !== 'submitting') return undefined;
+    let stop = false;
+    const tick = async () => {
+      try {
+        const res = await loanAPI.getReloanStatus();
+        if (stop || res?.status !== 1) return;
+        if (res.data?.hostedUrl) setReloanLink(res.data.hostedUrl);
+        if (res.data?.reloanAutoSubmit === 'submitted' || res.data?.reloanAutoSubmit === 'failed') {
+          fetchDataRef.current?.(true);
+        }
+      } catch (_) {}
+    };
+    tick();
+    const id = setInterval(tick, 5000);
+    return () => {
+      stop = true;
+      clearInterval(id);
+    };
+  }, [submittedApplication?.reloan_auto_submit]);
+
+  useEffect(() => {
+    if (!initialLoadDone || showWelcome || loading || hasAutoResumed.current || reloanPhase) return;
     // Cool-off blocks new apps only — draft customers can still auto-resume steps
     if (isCreditBlocked && !hasDraftApplication) return;
     // Don't auto-resume if application is already submitted (not draft)
@@ -319,6 +346,30 @@ export default function Dashboard() {
 
   const handleReviewRefresh = async () => {
     await fetchData(true);
+  };
+
+  const handleReloan = async () => {
+    if (creditEligibility?.allowed === false) {
+      setError(creditEligibility.userMessage || 'You are not eligible for a reloan at this time.');
+      return;
+    }
+    setCreatingApplication(true);
+    setError('');
+    try {
+      const response = await loanAPI.startReloan();
+      if (response.status === 1 || response.status === 201) {
+        setReloanLink(response.data?.hostedUrl || '');
+        setCurrentApplicationId(response.data?.applicationId || null);
+        await fetchData();
+        setShowWelcome(false);
+        setActiveStep(null);
+      }
+    } catch (err) {
+      console.error('Failed to start reloan:', err);
+      setError(getErrorMessage(err));
+    } finally {
+      setCreatingApplication(false);
+    }
   };
 
   const handleStartApplication = async () => {
@@ -708,7 +759,7 @@ export default function Dashboard() {
 
                   <div className="pt-4">
                     <Button 
-                        onClick={handleStartApplication} 
+                        onClick={canReloan ? handleReloan : handleStartApplication} 
                         disabled={creatingApplication || creditEligibility?.allowed === false}
                         className="h-14 px-8 bg-[#222222] hover:bg-[#111111] text-white text-lg font-medium rounded-full shadow-lg hover:shadow-xl transition-all active:scale-[0.98] disabled:opacity-50"
                     >
@@ -718,7 +769,7 @@ export default function Dashboard() {
                             </>
                         ) : (
                             <>
-                              {reapplicationData?.isReturningUser ? 'Start New Application' : 'Get Started'} <ArrowRight className="w-5 h-5 ml-2" />
+                              {canReloan ? 'Reloan' : (reapplicationData?.isReturningUser ? 'Start New Application' : 'Get Started')} <ArrowRight className="w-5 h-5 ml-2" />
                             </>
                         )}
                     </Button>
@@ -727,7 +778,43 @@ export default function Dashboard() {
           </div>
         )}
 
-        {!showWelcome && !loading && (
+        {!showWelcome && !loading && reloanPhase && (
+          <div className="max-w-xl mx-auto px-4 pt-16 space-y-4">
+            <h1 className="text-3xl font-semibold tracking-tight text-gray-900">Reloan</h1>
+            {submittedApplication?.reloan_auto_submit === 'failed' ? (
+              <>
+                <p className="text-red-700">{submittedApplication.reloan_error || 'The reloan could not be submitted.'}</p>
+                <Button
+                  onClick={handleReloan}
+                  disabled={creatingApplication}
+                  className="h-12 px-6 bg-[#222222] text-white rounded-full"
+                >
+                  {creatingApplication ? 'Starting...' : 'Try Reloan again'}
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="text-gray-600">
+                  Complete the fresh Account Aggregator consent. The reloan is submitted automatically after the bank response. There is no second submit step.
+                </p>
+                {reloanLink ? (
+                  <a
+                    href={reloanLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center h-12 px-6 bg-[#222222] text-white rounded-full font-medium"
+                  >
+                    Continue Account Aggregator <ExternalLink className="w-4 h-4 ml-2" />
+                  </a>
+                ) : (
+                  <p className="text-sm text-gray-400">Preparing your Account Aggregator link…</p>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {!showWelcome && !loading && !reloanPhase && (
           <>
              {showNewLoanBlockedBanner && (
                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">

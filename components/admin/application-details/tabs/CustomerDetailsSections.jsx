@@ -88,6 +88,7 @@ export default function CustomerDetailsSections() {
     handleAddApplicationReference,
     handleUpdateApplicationReference,
     handleDeleteApplicationReference,
+    handleLookupReferenceMobileName,
     handleUpdateApplicantProfile,
     handleUpdatePrimaryMobile,
     isReadOnly,
@@ -109,6 +110,7 @@ export default function CustomerDetailsSections() {
   const [refRecordingPreviewUrl, setRefRecordingPreviewUrl] = useState(null);
   const [refUploadProgress, setRefUploadProgress] = useState(null);
   const [refFormOpen, setRefFormOpen] = useState(false);
+  const [nameLookupId, setNameLookupId] = useState(null);
   const [refForm, setRefForm] = useState({
     id: null,
     reference_name: '',
@@ -860,10 +862,40 @@ export default function CustomerDetailsSections() {
                       >
                         Failed
                       </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className={`${btnSecondary} shrink-0`}
+                        disabled={updating}
+                        onClick={async () => {
+                          setNameLookupId(ref.id);
+                          try {
+                            await handleLookupReferenceMobileName(ref.id);
+                          } finally {
+                            setNameLookupId(null);
+                          }
+                        }}
+                      >
+                        {nameLookupId === ref.id ? 'Checking…' : 'Check name'}
+                      </Button>
                     </>
                   )}
                 </span>
               </span>
+              {(ref.mobile_linked_name || ref.name_lookup_message || ref.name_lookup_at) ? (
+                <span className="text-[11px] font-semibold text-slate-700">
+                  Linked name: {ref.mobile_linked_name || '—'}
+                  {ref.name_match === 0 || ref.name_match === 1 || ref.name_match === true || ref.name_match === false ? (
+                    <> · Match: {Number(ref.name_match) === 1 ? 'true' : 'false'}</>
+                  ) : null}
+                  {ref.name_match_score != null && ref.name_match_score !== '' ? (
+                    <> · Score: {Number(ref.name_match_score)}</>
+                  ) : null}
+                  {!ref.mobile_linked_name && ref.name_lookup_message ? (
+                    <> · {ref.name_lookup_message}</>
+                  ) : null}
+                </span>
+              ) : null}
               {ref.recording_url ? (
                 <div className="flex items-center gap-2 pt-1">
                   <Volume2 className="w-3.5 h-3.5 text-slate-500 shrink-0" />

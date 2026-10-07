@@ -27,6 +27,10 @@ export const loanAPI = {
   // Initialize Loan Application (Draft)
   initializeApplication: () => apiClient.post('/loan/initialize'),
 
+  // Reloan: fresh Account Aggregator, then automatic submit
+  startReloan: () => apiClient.post('/loan/reloan'),
+  getReloanStatus: () => apiClient.get('/loan/reloan/status'),
+
   // Create Loan Application (Final Submit)
   createLoanApplication: (data: Payload) => apiClient.post('/loan/apply', data),
 

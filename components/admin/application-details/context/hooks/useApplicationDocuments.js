@@ -702,6 +702,37 @@ export function useApplicationDocuments({
     }
   };
 
+  const handleLookupReferenceMobileName = async (referenceId) => {
+    setUpdating(true);
+    setError('');
+    try {
+      const response = await adminAPI.lookupReferenceMobileName(applicationId, referenceId);
+      if (response.status === 1) {
+        const lookup = response.data || {};
+        setData((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            references: (prev.references || []).map((r) =>
+              Number(r.id) === Number(referenceId) ? { ...r, ...lookup } : r
+            ),
+          };
+        });
+        setMessage(response.message || 'Name check complete');
+        return { ok: true, lookup };
+      }
+      const message = response.message || 'Name check failed';
+      setError(message);
+      return { ok: false, message };
+    } catch (err) {
+      const message = err.response?.data?.message || err.message || 'Name check failed';
+      setError(message);
+      return { ok: false, message };
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const handleUpdateApplicantProfile = async (payload) => {
     setUpdating(true);
     setError('');
@@ -770,6 +801,7 @@ export function useApplicationDocuments({
     handleAddApplicationReference,
     handleUpdateApplicationReference,
     handleDeleteApplicationReference,
+    handleLookupReferenceMobileName,
     handleUpdateApplicantProfile,
     handleUpdatePrimaryMobile,
   };

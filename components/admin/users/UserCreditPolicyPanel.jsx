@@ -5,8 +5,10 @@ import { cn } from '@/lib/utils';
 
 export default function UserCreditPolicyPanel({ userId }) {
   const [data, setData] = useState(null);
+  const [reloan, setReloan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
+  const [reloanActing, setReloanActing] = useState(false);
   const [note, setNote] = useState('');
   const [msg, setMsg] = useState('');
 
@@ -14,8 +16,12 @@ export default function UserCreditPolicyPanel({ userId }) {
     if (!userId) return;
     setLoading(true);
     try {
-      const res = await adminAPI.getUserCreditPolicy(userId);
+      const [res, reloanRes] = await Promise.all([
+        adminAPI.getUserCreditPolicy(userId),
+        adminAPI.getUserReloanStatus(userId).catch(() => null),
+      ]);
       if (res?.status === 1) setData(res.data);
+      if (reloanRes?.status === 1) setReloan(reloanRes.data);
     } catch (e) {
       setMsg(e.message || 'Failed to load credit policy');
     } finally {
@@ -26,6 +32,34 @@ export default function UserCreditPolicyPanel({ userId }) {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    const phase = reloan?.reloanAutoSubmit;
+    if (!userId || (phase !== 'pending' && phase !== 'submitting')) return undefined;
+    const id = setInterval(async () => {
+      try {
+        const res = await adminAPI.getUserReloanStatus(userId);
+        if (res?.status === 1) setReloan(res.data);
+      } catch (_) {}
+    }, 5000);
+    return () => clearInterval(id);
+  }, [userId, reloan?.reloanAutoSubmit]);
+
+  const startReloan = async () => {
+    setReloanActing(true);
+    setMsg('');
+    try {
+      const res = await adminAPI.startUserReloan(userId);
+      if (res?.status === 1) {
+        setReloan(res.data);
+        setMsg('Fresh Account Aggregator link sent. The application submits after the customer finishes it.');
+      }
+    } catch (e) {
+      setMsg(e.message || 'Reloan failed');
+    } finally {
+      setReloanActing(false);
+    }
+  };
 
   const clearCoolOff = async () => {
     setActing(true);
@@ -146,6 +180,26 @@ export default function UserCreditPolicyPanel({ userId }) {
         className="w-full text-xs rounded-lg border border-slate-200 px-3 py-2"
       />
 
+      {reloan?.reloanAutoSubmit === 'failed' && reloan.reloanError && (
+        <p className="text-xs text-red-700 bg-red-50 rounded-lg p-2 border border-red-100">{reloan.reloanError}</p>
+      )}
+      {['pending', 'submitting'].includes(reloan?.reloanAutoSubmit) && (
+        <p className="text-xs text-slate-600 bg-white rounded-lg p-2 border border-slate-100">
+          Waiting for the customer to finish the fresh Account Aggregator link. The reloan submits automatically after that.
+          {reloan.hostedUrl ? (
+            <>
+              {' '}
+              <a href={reloan.hostedUrl} target="_blank" rel="noreferrer" className="text-indigo-700 underline">Open link</a>
+            </>
+          ) : null}
+        </p>
+      )}
+      {reloan?.reloanAutoSubmit === 'submitted' && (
+        <p className="text-xs text-emerald-800 bg-emerald-50 rounded-lg p-2 border border-emerald-100">
+          Reloan application submitted for credit review.
+        </p>
+      )}
+
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
@@ -163,6 +217,16 @@ export default function UserCreditPolicyPanel({ userId }) {
         >
           Restore eligibility
         </button>
+        {reloan?.eligible && !['pending', 'submitting', 'submitted'].includes(reloan.reloanAutoSubmit) && (
+          <button
+            type="button"
+            disabled={reloanActing}
+            onClick={startReloan}
+            className="text-xs font-bold px-3 py-2 rounded-lg bg-[#222222] text-white hover:bg-black"
+          >
+            {reloanActing ? 'Starting…' : 'Reloan'}
+          </button>
+        )}
       </div>
 
       {msg && <p className="text-xs text-slate-600">{msg}</p>}
