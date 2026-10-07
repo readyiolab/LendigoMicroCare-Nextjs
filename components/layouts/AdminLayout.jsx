@@ -99,6 +99,75 @@ const NAV_ICON_MAP = {
   FileSpreadsheet,
   Layers,
 };
+
+const SIDEBAR_IMAGE_BY_ID = {
+  sanction: 'sanction.webp',
+  payment: 'payments.webp',
+  reports: 'reports.webp',
+  approval: 'for approval.webp',
+  collections: 'self-collect (1).webp',
+  risk: 'risk&credit.webp',
+  administration: 'Administration.webp',
+  fresh: 'fresh.webp',
+  'bucket-fresh': 'fresh.webp',
+  drafts: 'drafts.webp',
+  'all-apps': 'application.webp',
+  repeat: 'Repeat customers.webp',
+  'bucket-repeat': 'Repeat customers.webp',
+  blacklist: 'black-list.webp',
+  'under-review': 'under-review.webp',
+  recommended: 'recommended.webp',
+  approved: 'approved-process.webp',
+  rejected: 'rejected-process.webp',
+  'payout-review': 'payout-review.webp',
+  'disbursal-sheet': 'disbursal-sheet.webp',
+  video: 'video-decalration.webp',
+  repayments: 'repayment.webp',
+  'telecaller-performance': 'telecaller.webp',
+  'uw-performance': 'underwriting-reports.webp',
+  'ops-performance': 'operation-report.webp',
+  'mgmt-funnel': 'management funnel.webp',
+  'loan-book-mis': 'loan book mis.webp',
+  analytics: 'analytics.webp',
+  portfolio: 'disburse-portofolio.webp',
+  cibil: 'credit-cibil.webp',
+  'collection-report': 'collection-report.webp',
+  'online-payment': 'online-payment.webp',
+  settlements: 'settlement-approvals.webp',
+  reconciliation: 'reconciliation.webp',
+  'coll-dashboard': 'collection-dashboard.webp',
+  overdue: 'overduw-loans.webp',
+  ptp: 'promise to pay.webp',
+  'bre-mgmt': 'bre-management.webp',
+  'credit-policy': 'credit-policy.webp',
+  ledger: 'ledger-book.webp',
+  users: 'users.webp',
+  'staff-users': 'staff-users.webp',
+  roles: 'role-management.webp',
+  'credit-buckets': 'credit-bucket.webp',
+  products: 'loan product.webp',
+  'bucket-sanctional': 'sanction.webp',
+};
+
+function sidebarImageSrc(id) {
+  const file = SIDEBAR_IMAGE_BY_ID[id];
+  return file ? `/sidebar-icons/${encodeURIComponent(file)}` : null;
+}
+
+function NavGlyph({ id, Icon, className, strokeWidth }) {
+  const src = sidebarImageSrc(id);
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt=""
+        className="h-5 w-5 shrink-0 object-contain mix-blend-lighten"
+      />
+    );
+  }
+  return <Icon className={className} strokeWidth={strokeWidth} />;
+}
+
 // ==========================================
 // PAGE PROGRESS BAR
 // ==========================================
@@ -333,13 +402,15 @@ export default function AdminLayout() {
                         : 'text-[#444444] hover:bg-white/70 hover:text-[#111111]'
                     )}
                   >
-                    <Icon
+                    <NavGlyph
+                      id={item.id}
+                      Icon={Icon}
+                      strokeWidth={active ? 2 : 1.75}
                       className={cn(
                         'shrink-0 transition-colors duration-150',
                         navCompact ? 'w-5 h-5' : 'w-[18px] h-[18px]',
                         active ? 'text-[#111111]' : 'text-[#444444] group-hover:text-[#111111]'
                       )}
-                      strokeWidth={active ? 2 : 1.75}
                     />
                     {!navCompact && (
                       <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
@@ -392,9 +463,11 @@ export default function AdminLayout() {
                         : 'text-[#444444] hover:bg-white/70 hover:text-[#111111]'
                     )}
                   >
-                    <GroupIcon
-                      className={cn('h-[18px] w-[18px] shrink-0', groupHasActive ? 'text-[#111111]' : 'text-[#444444]')}
+                    <NavGlyph
+                      id={group.id}
+                      Icon={GroupIcon}
                       strokeWidth={groupHasActive ? 2 : 1.75}
+                      className={cn('h-[18px] w-[18px] shrink-0', groupHasActive ? 'text-[#111111]' : 'text-[#444444]')}
                     />
                     <span className="flex-1 truncate text-sm font-medium">
                       {group.label}
