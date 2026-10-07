@@ -483,7 +483,7 @@ export default function ApplicationDetailContent() {
 
     if (bootstrapping) {
         return (
-            <div className="relative flex flex-col h-full bg-slate-50">
+            <div className="relative flex flex-col h-full bg-[#F1F1F1]">
                 <div className="flex flex-col items-center justify-center min-h-[400px] flex-1 gap-3">
                     <Spinner size="lg" variant="primary" />
                     <p className="text-xs text-slate-500">Loading application…</p>
@@ -500,8 +500,8 @@ export default function ApplicationDetailContent() {
 
     return (
         <>
-            <div className="relative flex flex-col h-full bg-slate-50">
-                <div className="bg-white border-b border-slate-200/90 shadow-2xs">
+            <div className="relative flex flex-col h-full bg-[#F1F1F1]">
+                <div className="bg-[#F1F1F1] border-b border-[#E5E5E5]">
                     {/* Executive Case Header */}
                     <div className="px-5 sm:px-6 py-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                         <div className="flex items-center gap-4 min-w-0">
@@ -711,7 +711,7 @@ export default function ApplicationDetailContent() {
 
                     {/* Consolidated Primary Navigation */}
                     {!isRepaymentReview && (
-                        <div className="px-5 sm:px-6 bg-white border-b border-slate-200">
+                        <div className="px-5 sm:px-6 bg-[#F1F1F1] border-b border-[#E5E5E5]">
                             <div className="flex items-center gap-6 overflow-x-auto scrollbar-none -mb-px">
                                 {navigationGroups.map((group) => {
                                     const isGroupActive = activeGroup?.id === group.id;
@@ -737,7 +737,7 @@ export default function ApplicationDetailContent() {
 
                     {/* Secondary Sub-Navigation Strip (when the active group has >1 section) */}
                     {!isRepaymentReview && activeGroup && activeGroup.subtabs.length > 1 && (
-                        <div className="px-5 sm:px-6 py-2 bg-slate-50/70 border-b border-slate-200/80">
+                        <div className="px-5 sm:px-6 py-2 bg-[#F1F1F1] border-b border-[#E5E5E5]">
                             <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
                                 {activeGroup.subtabs.map((sub) => {
                                     const isSubActive = activeTab === sub.id;
@@ -762,7 +762,7 @@ export default function ApplicationDetailContent() {
                     )}
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 bg-slate-50/80">
+                <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 bg-[#F1F1F1]">
                     {!data ? (
                         <div className="flex flex-col items-center justify-center py-16 text-center space-y-4 max-w-sm mx-auto">
                             <div className="w-14 h-14 rounded-lg bg-white border border-slate-200 flex items-center justify-center">

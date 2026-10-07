@@ -127,7 +127,7 @@ function HeaderSearch({ navigate }) {
         }
       }}
       placeholder="Customer ID, PAN, Lead, mobile"
-      className="h-10 pl-9 pr-3 rounded-lg border-slate-200 bg-slate-50 text-sm placeholder:text-slate-400"
+      className="h-10 pl-9 pr-3 rounded-lg border-[#E5E5E5] bg-white text-sm placeholder:text-[#999999]"
     />
   );
 }
@@ -264,7 +264,7 @@ export default function AdminLayout() {
   }, [admin]);
 
   return (
-    <div className="min-h-screen bg-white flex flex-col font-sans">
+    <div className="min-h-screen bg-[#F1F1F1] flex flex-col font-sans">
       {isNavigating && <PageProgressBar />}
       
       <aside
@@ -282,7 +282,7 @@ export default function AdminLayout() {
                 type="button"
                 onClick={() => dispatch(toggleSidebar())}
                 aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                className="hidden lg:flex absolute -right-3 top-8 z-50 bg-white text-[#777777] hover:text-[#111111] border border-[#E5E5E5] rounded-full p-1 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/25"
+                className="hidden lg:flex absolute -right-3 top-8 z-50 bg-white text-[#444444] hover:text-[#111111] border border-[#E5E5E5] rounded-full p-1 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/25"
            >
                 {isSidebarCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
            </button>
@@ -330,14 +330,14 @@ export default function AdminLayout() {
                       !nested && !navCompact && 'h-11 px-3',
                       active
                         ? 'bg-white text-[#111111] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
-                        : 'text-[#777777] hover:bg-white/70 hover:text-[#111111]'
+                        : 'text-[#444444] hover:bg-white/70 hover:text-[#111111]'
                     )}
                   >
                     <Icon
                       className={cn(
                         'shrink-0 transition-colors duration-150',
                         navCompact ? 'w-5 h-5' : 'w-[18px] h-[18px]',
-                        active ? 'text-[#111111]' : 'text-[#777777] group-hover:text-[#111111]'
+                        active ? 'text-[#111111]' : 'text-[#444444] group-hover:text-[#111111]'
                       )}
                       strokeWidth={active ? 2 : 1.75}
                     />
@@ -389,11 +389,11 @@ export default function AdminLayout() {
                       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20',
                       groupHasActive
                         ? 'text-[#111111]'
-                        : 'text-[#777777] hover:bg-white/70 hover:text-[#111111]'
+                        : 'text-[#444444] hover:bg-white/70 hover:text-[#111111]'
                     )}
                   >
                     <GroupIcon
-                      className={cn('h-[18px] w-[18px] shrink-0', groupHasActive ? 'text-[#111111]' : 'text-[#777777]')}
+                      className={cn('h-[18px] w-[18px] shrink-0', groupHasActive ? 'text-[#111111]' : 'text-[#444444]')}
                       strokeWidth={groupHasActive ? 2 : 1.75}
                     />
                     <span className="flex-1 truncate text-sm font-medium">
@@ -401,7 +401,7 @@ export default function AdminLayout() {
                     </span>
                     <ChevronDown
                       className={cn(
-                        'h-4 w-4 shrink-0 text-[#999999] transition-transform duration-200',
+                        'h-4 w-4 shrink-0 text-[#666666] transition-transform duration-200',
                         isOpen && 'rotate-180'
                       )}
                     />
@@ -422,7 +422,7 @@ export default function AdminLayout() {
               onClick={handleLogout}
               title={navCompact ? 'Sign Out' : undefined}
               className={cn(
-                'flex h-11 w-full items-center rounded-xl text-sm font-medium text-[#777777] transition-colors duration-150 hover:bg-white hover:text-[#111111]',
+                'flex h-11 w-full items-center rounded-xl text-sm font-medium text-[#444444] transition-colors duration-150 hover:bg-white hover:text-[#111111]',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20',
                 navCompact ? 'justify-center px-2' : 'gap-3 px-3'
               )}
@@ -443,10 +443,10 @@ export default function AdminLayout() {
       )}
 
       <div className={cn(
-          'flex min-w-0 flex-1 flex-col bg-white transition-[margin] duration-200 ease-out',
+          'flex min-w-0 flex-1 flex-col bg-[#F1F1F1] transition-[margin] duration-200 ease-out',
           showWideSidebar ? 'lg:ml-[272px]' : 'lg:ml-20'
       )}>
-        <header className="sticky top-0 z-30 border-b border-[#E5E5E5] bg-white">
+        <header className="sticky top-0 z-30 border-b border-[#E5E5E5] bg-[#F1F1F1]">
           <div className="flex h-20 items-center justify-between gap-4 px-6 lg:px-10">
             <button
               type="button"
@@ -477,7 +477,7 @@ export default function AdminLayout() {
           </div>
         </header>
 
-        <main className={cn('flex-1 overflow-auto bg-white', !isApplicationDetail && 'p-4 lg:p-6')}>
+        <main className={cn('flex-1 overflow-auto bg-[#F1F1F1]', !isApplicationDetail && 'p-4 lg:p-6')}>
           <div
             className={cn(
               location.pathname.includes('/admin/applications/fill/') || isApplicationDetail
