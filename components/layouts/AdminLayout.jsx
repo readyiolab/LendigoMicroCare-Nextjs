@@ -161,7 +161,7 @@ function NavGlyph({ id, Icon, className, strokeWidth }) {
       <img
         src={src}
         alt=""
-        className="h-5 w-5 shrink-0 object-contain mix-blend-lighten"
+        className="h-5 w-5 shrink-0 object-contain"
       />
     );
   }
