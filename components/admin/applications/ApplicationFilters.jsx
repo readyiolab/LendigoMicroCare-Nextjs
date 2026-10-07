@@ -106,12 +106,19 @@ const CHIP_TONES = {
     badge: 'bg-red-600 text-white',
     badgeActive: 'bg-white text-red-700',
   },
+  purple: {
+    idle: 'border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100',
+    active: 'border-purple-600 bg-purple-600 text-white',
+    badge: 'bg-purple-600 text-white',
+    badgeActive: 'bg-white text-purple-700',
+  },
 };
 
 const CHIP_TONE_BY_ID = {
   all: 'slate',
   draft: 'gray',
   submitted: 'blue',
+  pending_pd: 'purple',
   recommended: 'indigo',
   approved: 'green',
   offer_sent: 'cyan',
@@ -126,6 +133,21 @@ const CHIP_TONE_BY_ID = {
 
 function chipToneFor(chip) {
   return CHIP_TONES[CHIP_TONE_BY_ID[chip.id]] || CHIP_TONES.slate;
+}
+
+const PD_PENDING_CHIP = { id: 'pending_pd', label: 'PD Pending', countKeys: ['pending_pd'] };
+const PD_PENDING_ROLES = new Set(['credit_manager', 'underwriter', 'approver']);
+
+function statusChipsForRole(role) {
+  const base = role === 'telecaller' ? QUICK_STATUS_FILTERS : PIPELINE_STATUS_FILTERS;
+  if (!PD_PENDING_ROLES.has(role)) return base;
+  const afterSubmitted = base.findIndex((chip) => chip.id === 'submitted');
+  if (afterSubmitted === -1) return [PD_PENDING_CHIP, ...base];
+  return [
+    ...base.slice(0, afterSubmitted + 1),
+    PD_PENDING_CHIP,
+    ...base.slice(afterSubmitted + 1),
+  ];
 }
 
 function chipCountFor(chip, statusCounts) {
@@ -523,7 +545,7 @@ function ApplicationFilters({
       </div>
 
       <div className="flex flex-wrap gap-x-3 gap-y-3 pt-2">
-        {(currentAdminRole === 'telecaller' ? QUICK_STATUS_FILTERS : PIPELINE_STATUS_FILTERS).map((chip) => {
+        {statusChipsForRole(currentAdminRole).map((chip) => {
           const isActive = statusFilter === chip.id;
           const chipCount = chipCountFor(chip, statusCounts);
           const tone = chipToneFor(chip);

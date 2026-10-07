@@ -264,31 +264,33 @@ export default function AdminLayout() {
   }, [admin]);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans">
+    <div className="min-h-screen bg-white flex flex-col font-sans">
       {isNavigating && <PageProgressBar />}
       
       <aside
         onMouseEnter={handleSidebarEnter}
         onMouseLeave={handleSidebarLeave}
         className={cn(
-          'fixed inset-y-0 left-0 z-50 bg-gradient-to-b from-[#0F172A] via-[#111827] to-[#1E3A8A] text-[#E2E8F0] border-r border-slate-800',
-          'transition-[width,box-shadow] duration-200 ease-out will-change-[width]',
+          'fixed inset-y-0 left-0 z-50 bg-[#F1F1F1] text-[#111111] border-r border-[#E5E5E5]',
+          'transition-[width,transform] duration-200 ease-out',
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
-          showWideSidebar ? 'w-64' : 'w-20'
+          showWideSidebar ? 'w-[240px] lg:w-[272px]' : 'w-20'
         )}
       >
         <div className="flex flex-col h-full relative">
-           <button 
+           <button
+                type="button"
                 onClick={() => dispatch(toggleSidebar())}
-                className="hidden lg:flex absolute -right-3 top-9 z-50 bg-[#0F172A] text-slate-400 hover:text-white border border-slate-700 rounded-full p-1 shadow-md transition-colors"
+                aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                className="hidden lg:flex absolute -right-3 top-8 z-50 bg-white text-[#777777] hover:text-[#111111] border border-[#E5E5E5] rounded-full p-1 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/25"
            >
                 {isSidebarCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
            </button>
 
           <div
             className={cn(
-              'h-16 flex items-center border-b border-slate-800 bg-white overflow-hidden',
-              navCompact ? 'justify-center px-2' : 'justify-start px-3'
+              'flex items-center overflow-hidden',
+              navCompact ? 'h-16 justify-center px-2' : 'h-[72px] justify-start px-5 lg:px-6'
             )}
           >
              <img
@@ -301,7 +303,7 @@ export default function AdminLayout() {
              />
           </div>
 
-          <nav className="flex-1 px-3 py-4 space-y-3 overflow-y-auto overflow-x-hidden no-scrollbar">
+          <nav aria-label="Admin" className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar px-3 py-2 lg:px-4">
             {filteredGroups.map((group) => {
               const GroupIcon = group.icon;
               const isOpen = openGroups[group.id] ?? false;
@@ -315,43 +317,44 @@ export default function AdminLayout() {
                 return (
                   <button
                     key={item.path}
+                    type="button"
                     onClick={() => handleNavigate(item.path)}
                     title={navCompact ? `${group.label} · ${item.label}` : undefined}
+                    aria-current={active ? 'page' : undefined}
                     onMouseEnter={() => preloadRoute(item.path)}
                     className={cn(
-                      'group relative w-full flex items-center rounded-md transition-colors duration-150 ease-out',
-                      navCompact ? 'justify-center px-2 py-2.5' : 'gap-3 py-2',
-                      nested && !navCompact && 'pl-9 pr-3',
-                      !nested && !navCompact && 'px-3.5 py-2.5',
+                      'group relative w-full flex items-center rounded-xl transition-colors duration-150 ease-out',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20',
+                      navCompact ? 'h-11 justify-center px-2' : 'gap-3',
+                      nested && !navCompact && 'h-10 pl-3 pr-2',
+                      !nested && !navCompact && 'h-11 px-3',
                       active
-                        ? 'bg-gradient-to-r from-[#2563EB]/20 to-[#1E3A8A]/10 text-white font-medium shadow-inner'
-                        : 'text-[#E2E8F0]/70 hover:bg-[#1E293B] hover:text-white'
+                        ? 'bg-white text-[#111111] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
+                        : 'text-[#777777] hover:bg-white/70 hover:text-[#111111]'
                     )}
                   >
                     <Icon
                       className={cn(
-                        'transition-colors duration-200 shrink-0',
-                        !navCompact && 'w-4 h-4',
-                        navCompact && 'w-5 h-5',
-                        active ? 'text-[#38BDF8]' : 'text-slate-400 group-hover:text-slate-200'
+                        'shrink-0 transition-colors duration-150',
+                        navCompact ? 'w-5 h-5' : 'w-[18px] h-[18px]',
+                        active ? 'text-[#111111]' : 'text-[#777777] group-hover:text-[#111111]'
                       )}
                       strokeWidth={active ? 2 : 1.75}
                     />
                     {!navCompact && (
-                      <div className="flex-1 flex items-center justify-between min-w-0">
-                        <span className="text-sm tracking-wide truncate">{item.label}</span>
+                      <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                        <span className={cn('truncate', nested ? 'text-[13px]' : 'text-sm')}>{item.label}</span>
                         {showAppsBadge && (
-                          <span className="bg-[#EF4444] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm animate-pulse ml-1">
+                          <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#FFB58F] px-1.5 text-[11px] font-medium leading-none text-[#111111]">
                             {unreadCount}
                           </span>
                         )}
                       </div>
                     )}
                     {navCompact && showAppsBadge && (
-                      <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#EF4444] border-2 border-[#0F172A] rounded-full" />
-                    )}
-                    {active && !navCompact && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-[#2563EB] rounded-r-full" />
+                      <span className="absolute right-1.5 top-1.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#FFB58F] px-1 text-[9px] font-medium leading-none text-[#111111]">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
                     )}
                   </button>
                 );
@@ -359,7 +362,7 @@ export default function AdminLayout() {
 
               if (navCompact) {
                 return (
-                  <div key={group.id} className="space-y-1">
+                  <div key={group.id} className="mb-2 space-y-1">
                     {group.children.map((item) => renderNavItem(item))}
                   </div>
                 );
@@ -369,40 +372,42 @@ export default function AdminLayout() {
 
               if (singleChild) {
                 return (
-                  <div key={group.id} className="space-y-0.5">
-                    <p className="px-3.5 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-                      {group.label}
-                    </p>
+                  <div key={group.id} className="mb-1">
                     {renderNavItem(group.children[0])}
                   </div>
                 );
               }
 
               return (
-                <div key={group.id} className="space-y-0.5">
+                <div key={group.id} className="mb-1">
                   <button
                     type="button"
                     onClick={() => toggleGroup(group.id)}
+                    aria-expanded={isOpen}
                     className={cn(
-                      'w-full flex items-center gap-2 px-3.5 py-2 rounded-lg text-left transition-colors',
+                      'flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left transition-colors duration-150',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20',
                       groupHasActive
-                        ? 'text-white bg-[#1E293B]/60'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-[#1E293B]/40'
+                        ? 'text-[#111111]'
+                        : 'text-[#777777] hover:bg-white/70 hover:text-[#111111]'
                     )}
                   >
-                    <GroupIcon className="w-4 h-4 shrink-0 text-[#38BDF8]/80" strokeWidth={1.75} />
-                    <span className="flex-1 text-[11px] font-semibold uppercase tracking-wider">
+                    <GroupIcon
+                      className={cn('h-[18px] w-[18px] shrink-0', groupHasActive ? 'text-[#111111]' : 'text-[#777777]')}
+                      strokeWidth={groupHasActive ? 2 : 1.75}
+                    />
+                    <span className="flex-1 truncate text-sm font-medium">
                       {group.label}
                     </span>
                     <ChevronDown
                       className={cn(
-                        'w-4 h-4 shrink-0 transition-transform duration-200',
+                        'h-4 w-4 shrink-0 text-[#999999] transition-transform duration-200',
                         isOpen && 'rotate-180'
                       )}
                     />
                   </button>
                   {isOpen && (
-                    <div className="space-y-0.5 border-l border-slate-700/80 ml-4 pl-1">
+                    <div className="relative ml-[21px] mt-1 space-y-0.5 border-l border-[#E5E5E5] pl-2">
                       {group.children.map((item) => renderNavItem(item, true))}
                     </div>
                   )}
@@ -411,16 +416,18 @@ export default function AdminLayout() {
             })}
           </nav>
 
-          <div className="p-3 border-t border-slate-800 bg-white/[0.02]">
+          <div className="border-t border-[#E5E5E5] p-3 lg:p-4">
             <button
+              type="button"
               onClick={handleLogout}
               title={navCompact ? 'Sign Out' : undefined}
               className={cn(
-                'w-full flex items-center rounded-md text-sm font-medium transition-colors duration-150 px-3 py-2.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10',
-                navCompact ? 'justify-center' : 'gap-3'
+                'flex h-11 w-full items-center rounded-xl text-sm font-medium text-[#777777] transition-colors duration-150 hover:bg-white hover:text-[#111111]',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20',
+                navCompact ? 'justify-center px-2' : 'gap-3 px-3'
               )}
             >
-              <LogOut className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+              <LogOut className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
               {!navCompact && <span>Sign Out</span>}
             </button>
           </div>
@@ -429,21 +436,23 @@ export default function AdminLayout() {
 
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/20 lg:hidden"
           onClick={() => dispatch(setIsMobileMenuOpen(false))}
           aria-hidden="true"
         />
       )}
 
       <div className={cn(
-          'flex-1 flex flex-col min-w-0 transition-[margin] duration-200 ease-out',
-          showWideSidebar ? 'lg:ml-64' : 'lg:ml-20'
+          'flex min-w-0 flex-1 flex-col bg-white transition-[margin] duration-200 ease-out',
+          showWideSidebar ? 'lg:ml-[272px]' : 'lg:ml-20'
       )}>
-        <header className="bg-white/90 backdrop-blur-md border-b border-[#E2E8F0] sticky top-0 z-30 shadow-xs">
-          <div className="flex items-center justify-between gap-4 h-20 px-6 lg:px-10">
+        <header className="sticky top-0 z-30 border-b border-[#E5E5E5] bg-white">
+          <div className="flex h-20 items-center justify-between gap-4 px-6 lg:px-10">
             <button
+              type="button"
+              aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
               onClick={() => dispatch(setIsMobileMenuOpen(!isMobileMenuOpen))}
-              className="lg:hidden p-2 -ml-2 rounded-lg hover:bg-slate-100 text-slate-800"
+              className="rounded-lg p-2 -ml-2 text-[#111111] transition-colors duration-150 hover:bg-[#F1F1F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20 lg:hidden"
             >
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -468,7 +477,7 @@ export default function AdminLayout() {
           </div>
         </header>
 
-        <main className={cn('flex-1 overflow-auto bg-background', !isApplicationDetail && 'p-4 lg:p-6')}>
+        <main className={cn('flex-1 overflow-auto bg-white', !isApplicationDetail && 'p-4 lg:p-6')}>
           <div
             className={cn(
               location.pathname.includes('/admin/applications/fill/') || isApplicationDetail

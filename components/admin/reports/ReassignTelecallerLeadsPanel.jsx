@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { formatStatusLabel } from '@/utils/statusUtils';
+import CasePager from './CasePager';
 
 export default function ReassignTelecallerLeadsPanel({
   telecallers = [],
@@ -10,6 +11,10 @@ export default function ReassignTelecallerLeadsPanel({
   loading = false,
   assigning = false,
   onReassign,
+  page = 1,
+  pageSize = 25,
+  total = 0,
+  onPageChange,
 }) {
   const [selected, setSelected] = useState([]);
   const [targetId, setTargetId] = useState('');
@@ -161,6 +166,9 @@ export default function ReassignTelecallerLeadsPanel({
           </tbody>
         </table>
       </div>
+      {onPageChange && (
+        <CasePager page={page} pageSize={pageSize} total={total} onPageChange={onPageChange} />
+      )}
     </div>
   );
 }

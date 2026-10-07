@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { formatStatusLabel } from '@/utils/statusUtils';
+import CasePager from './CasePager';
 
 export default function UnassignedLeadsPanel({
   title = 'Assign / Reassign leads',
@@ -12,6 +14,16 @@ export default function UnassignedLeadsPanel({
   assigning = false,
   onAssign,
   onAutoAssign,
+  searchValue = '',
+  onSearchChange,
+  page = 1,
+  pageSize = 25,
+  total = 0,
+  onPageChange,
+  onDownload,
+  downloadStatus = 'idle',
+  downloadMessage = '',
+  onDownloadFile,
   extraFilterOptions = [],
   extraFilterValue = '',
   onExtraFilterChange,
@@ -64,7 +76,7 @@ export default function UnassignedLeadsPanel({
         <div>
           <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
           <p className="text-[11px] text-slate-500">
-            {leads.length} lead{leads.length === 1 ? '' : 's'} · select cases to assign or reassign to any {staffLabel}
+            Select the cases on this page, then assign them.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -123,8 +135,24 @@ export default function UnassignedLeadsPanel({
               Auto-assign
             </Button>
           )}
+          {onDownload && (
+            <Button type="button" size="sm" variant="outline" className="h-8 text-xs" onClick={downloadStatus === 'ready' ? onDownloadFile : onDownload} disabled={downloadStatus === 'processing'}>
+              {downloadStatus === 'processing' ? 'Preparing your file…' : downloadStatus === 'ready' ? 'Download file' : 'Download cases'}
+            </Button>
+          )}
         </div>
       </div>
+      {downloadMessage ? <p className="px-4 py-2 text-[12px] text-slate-600 border-b border-slate-100">{downloadMessage}</p> : null}
+      {onSearchChange && (
+        <div className="px-4 py-2 border-b border-slate-100">
+          <Input
+            value={searchValue}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Search name, mobile, or case number"
+            className="h-9 text-[13px] max-w-sm"
+          />
+        </div>
+      )}
       {error && <p className="px-4 py-2 text-[12px] text-red-600 bg-red-50 border-b border-red-100">{error}</p>}
       <div className="overflow-x-auto max-h-80">
         <table className="w-full text-sm">
@@ -141,7 +169,13 @@ export default function UnassignedLeadsPanel({
             </tr>
           </thead>
           <tbody>
-            {leads.length === 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan={6} className="px-4 py-6">
+                  <div className="h-4 w-40 bg-slate-100 animate-pulse rounded" />
+                </td>
+              </tr>
+            ) : leads.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-center text-slate-400 text-xs">
                   No leads found matching current filter (select a Credit Manager above or choose &ldquo;All assigned&rdquo; to reassign)
@@ -169,6 +203,9 @@ export default function UnassignedLeadsPanel({
           </tbody>
         </table>
       </div>
+      {onPageChange && (
+        <CasePager page={page} pageSize={pageSize} total={total} onPageChange={onPageChange} />
+      )}
     </div>
   );
 }

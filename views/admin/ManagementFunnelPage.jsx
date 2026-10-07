@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { adminAPI } from '@/lib/api';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Spinner } from '@/components/ui/spinner';
 import ReportFilters from '@/components/admin/reports/ReportFilters';
 
 const EMPTY_FILTERS = {
-  city: '', from: '', to: '', creditManagerId: '', telecallerId: '',
+  city: '', from: '', to: '', creditManagerId: '', telecallerId: '', productId: '',
   underwriterId: '', opsManagerId: '', applicationStatus: '', assignmentStatus: '',
   verificationStatus: '', offerStatus: '', disbursalStatus: '', customerId: '',
 };
@@ -42,10 +41,14 @@ export default function ManagementFunnelPage() {
         <h1 className="text-[17px] font-bold text-slate-900 tracking-tight">Management funnel</h1>
         <p className="text-xs text-slate-500">Lead through bank transfer — totals, pending, and completed at each stage</p>
       </div>
-      <ReportFilters filters={filters} setFilters={setFilters} cities={[]} />
+      <ReportFilters filters={filters} onApply={setFilters} cities={[]} />
       {error && <Alert variant="destructive" className="bg-red-50 border-red-200"><AlertDescription className="text-sm">{error}</AlertDescription></Alert>}
       {loading ? (
-        <div className="flex justify-center py-16"><Spinner size="lg" variant="primary" /></div>
+        <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-2">
+          <div className="h-4 w-full bg-slate-100 animate-pulse rounded" />
+          <div className="h-4 w-full bg-slate-100 animate-pulse rounded" />
+          <div className="h-4 w-2/3 bg-slate-100 animate-pulse rounded" />
+        </div>
       ) : (
         <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
           <table className="w-full text-sm">

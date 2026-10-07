@@ -549,8 +549,8 @@ export const adminAPI = {
   getCreditManagerReport: (params: QueryParams = {}) =>
     apiClient.get('/admin/reports/credit-managers', { params }),
 
-  getUnassignedCreditLeads: (params: QueryParams = {}) =>
-    apiClient.get('/admin/reports/credit-managers/unassigned', { params }),
+  getUnassignedCreditLeads: (params: QueryParams = {}, config: { signal?: AbortSignal } = {}) =>
+    apiClient.get('/admin/reports/credit-managers/unassigned', { params, signal: config.signal }),
 
   assignCreditManagersBatch: (applicationIds: Id[], adminId: Id) =>
     apiClient.post('/admin/applications/assign-credit-batch', { applicationIds, adminId }),
@@ -558,17 +558,17 @@ export const adminAPI = {
   getTelecallerReport: (params: QueryParams = {}) =>
     apiClient.get('/admin/reports/telecallers', { params }),
 
-  getUnassignedTelecallerLeads: (params: QueryParams = {}) =>
-    apiClient.get('/admin/reports/telecallers/unassigned', { params }),
+  getUnassignedTelecallerLeads: (params: QueryParams = {}, config: { signal?: AbortSignal } = {}) =>
+    apiClient.get('/admin/reports/telecallers/unassigned', { params, signal: config.signal }),
 
-  getAssignedTelecallerLeads: (params: QueryParams = {}) =>
-    apiClient.get('/admin/reports/telecallers/assigned', { params }),
+  getAssignedTelecallerLeads: (params: QueryParams = {}, config: { signal?: AbortSignal } = {}) =>
+    apiClient.get('/admin/reports/telecallers/assigned', { params, signal: config.signal }),
 
   getUnderwriterReport: (params: QueryParams = {}) =>
     apiClient.get('/admin/reports/underwriters', { params }),
 
-  getUnassignedUnderwriterLeads: (params: QueryParams = {}) =>
-    apiClient.get('/admin/reports/underwriters/unassigned', { params }),
+  getUnassignedUnderwriterLeads: (params: QueryParams = {}, config: { signal?: AbortSignal } = {}) =>
+    apiClient.get('/admin/reports/underwriters/unassigned', { params, signal: config.signal }),
 
   assignUnderwriter: (applicationId: Id, adminId: Id) =>
     apiClient.post(`/admin/applications/${applicationId}/assign-underwriter`, { adminId }),
@@ -579,8 +579,8 @@ export const adminAPI = {
   getOperationsReport: (params: QueryParams = {}) =>
     apiClient.get('/admin/reports/operations', { params }),
 
-  getUnassignedOpsLeads: (params: QueryParams = {}) =>
-    apiClient.get('/admin/reports/operations/unassigned', { params }),
+  getUnassignedOpsLeads: (params: QueryParams = {}, config: { signal?: AbortSignal } = {}) =>
+    apiClient.get('/admin/reports/operations/unassigned', { params, signal: config.signal }),
 
   assignOpsManager: (applicationId: Id, adminId: Id) =>
     apiClient.post(`/admin/applications/${applicationId}/assign-ops`, { adminId }),
@@ -590,6 +590,15 @@ export const adminAPI = {
 
   getManagementFunnel: (params: QueryParams = {}) =>
     apiClient.get('/admin/reports/management-funnel', { params }),
+
+  createReportExport: (data: QueryParams) =>
+    apiClient.post('/admin/reports/exports', data),
+
+  getReportExport: (reportId: Id) =>
+    apiClient.get(`/admin/reports/exports/${reportId}`),
+
+  downloadReportExport: (reportId: Id) =>
+    apiClient.get(`/admin/reports/exports/${reportId}/download`, { responseType: 'blob' }),
 
   getJourneyPipeline: (applicationId: Id) =>
     apiClient.get(`/admin/applications/${applicationId}/journey-pipeline`),

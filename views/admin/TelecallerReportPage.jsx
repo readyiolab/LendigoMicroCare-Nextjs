@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { adminAPI } from '@/lib/api';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -12,75 +12,60 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/spinner';
 import ReportFilters from '@/components/admin/reports/ReportFilters';
 import UnassignedLeadsPanel from '@/components/admin/reports/UnassignedLeadsPanel';
 import ReassignTelecallerLeadsPanel from '@/components/admin/reports/ReassignTelecallerLeadsPanel';
+import ReportSummaryCards, { averageHours } from '@/components/admin/reports/ReportSummaryCards';
+import { usePagedLeads } from '@/components/admin/reports/usePagedLeads';
+import { useReportExport } from '@/components/admin/reports/useReportExport';
 
 const EMPTY_FILTERS = {
-  city: '', from: '', to: '', telecallerId: '', creditManagerId: '',
+  city: '', from: '', to: '', telecallerId: '', creditManagerId: '', productId: '',
   applicationStatus: '', assignmentStatus: '', customerId: '',
 };
 
 export default function TelecallerReportPage() {
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [data, setData] = useState(null);
-  const [unassigned, setUnassigned] = useState({ leads: [], telecallers: [] });
-  const [assigned, setAssigned] = useState({ leads: [], telecallers: [] });
   const [sourceId, setSourceId] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [assignedLoading, setAssignedLoading] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summaryReady, setSummaryReady] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [error, setError] = useState('');
   const [assigning, setAssigning] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
   const [absentTarget, setAbsentTarget] = useState(null);
 
+  const loadUnassigned = useCallback((params, config) => adminAPI.getUnassignedTelecallerLeads(params, config), []);
+  const cases = usePagedLeads(loadUnassigned, filters, summaryReady, refreshKey);
+  const assignedFilters = useMemo(() => ({ ...filters, telecallerId: sourceId }), [filters, sourceId]);
+  const loadAssignedCases = useCallback((params, config) => adminAPI.getAssignedTelecallerLeads(params, config), []);
+  const assignedCases = usePagedLeads(loadAssignedCases, assignedFilters, summaryReady && !!sourceId, refreshKey);
+  const exportJob = useReportExport('telecaller', filters);
+
   const load = useCallback(async () => {
-    setLoading(true);
+    setSummaryLoading(true);
     setError('');
     try {
       const params = {};
       Object.entries(filters).forEach(([key, value]) => { if (value) params[key] = value; });
-      const [report, unassignedRes] = await Promise.all([
-        adminAPI.getTelecallerReport(params),
-        adminAPI.getUnassignedTelecallerLeads(params),
-      ]);
+      const report = await adminAPI.getTelecallerReport(params);
       if (report.status === 1) setData(report.data);
       else setError(report.message || 'Failed to load report');
-      if (unassignedRes.status === 1) setUnassigned(unassignedRes.data || { leads: [] });
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to load report');
     } finally {
-      setLoading(false);
+      setSummaryLoading(false);
+      setSummaryReady(true);
     }
   }, [filters]);
 
-  const loadAssigned = useCallback(async (telecallerId) => {
-    if (!telecallerId) {
-      setAssigned({ leads: [], telecallers: [] });
-      return;
-    }
-    setAssignedLoading(true);
-    try {
-      const params = { telecallerId };
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value && key !== 'telecallerId') params[key] = value;
-      });
-      const res = await adminAPI.getAssignedTelecallerLeads(params);
-      if (res.status === 1) setAssigned(res.data || { leads: [], telecallers: [] });
-      else setError(res.message || 'Failed to load assigned leads');
-    } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to load assigned leads');
-    } finally {
-      setAssignedLoading(false);
-    }
-  }, [filters]);
+  const bump = async () => {
+    setRefreshKey((value) => value + 1);
+    await load();
+  };
 
   useEffect(() => { load(); }, [load]);
-
-  useEffect(() => {
-    loadAssigned(sourceId);
-  }, [sourceId, loadAssigned]);
 
   const handleAssign = async (applicationIds, adminId) => {
     setAssigning(true);
@@ -89,8 +74,7 @@ export default function TelecallerReportPage() {
       for (const id of applicationIds) {
         await adminAPI.assignApplication(id, adminId);
       }
-      await load();
-      if (sourceId) await loadAssigned(sourceId);
+      await bump();
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Assign failed');
     } finally {
@@ -104,8 +88,7 @@ export default function TelecallerReportPage() {
     try {
       await adminAPI.autoAssignApplications({ status: 'draft' });
       await adminAPI.autoAssignApplications({ status: 'pending_eligibility' });
-      await load();
-      if (sourceId) await loadAssigned(sourceId);
+      await bump();
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Auto-assign failed');
     } finally {
@@ -118,8 +101,7 @@ export default function TelecallerReportPage() {
     setError('');
     try {
       await adminAPI.reassignTelecallerApplications(applicationIds, adminId);
-      await load();
-      if (sourceId) await loadAssigned(sourceId);
+      await bump();
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Reassign failed');
     } finally {
@@ -136,8 +118,7 @@ export default function TelecallerReportPage() {
       const res = await adminAPI.markTelecallerAbsent(telecaller.id);
       if (res.status !== 1) throw new Error(res.message || 'Failed to mark absent');
       setAbsentTarget(null);
-      await load();
-      if (String(sourceId) === String(telecaller.id)) await loadAssigned(sourceId);
+      await bump();
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to mark absent');
     } finally {
@@ -151,7 +132,7 @@ export default function TelecallerReportPage() {
     try {
       const res = await adminAPI.markTelecallerAvailable(telecaller.id);
       if (res.status !== 1) throw new Error(res.message || 'Failed to mark available');
-      await load();
+      await bump();
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to mark available');
     } finally {
@@ -160,8 +141,14 @@ export default function TelecallerReportPage() {
   };
 
   const rows = data?.telecallers || [];
-  const staffList = unassigned.telecallers?.length ? unassigned.telecallers : rows;
-  const reassignStaff = assigned.telecallers?.length ? assigned.telecallers : staffList;
+  const staffList = cases.extra?.telecallers?.length ? cases.extra.telecallers : rows;
+  const reassignStaff = assignedCases.extra?.telecallers?.length ? assignedCases.extra.telecallers : staffList;
+  const totals = {
+    allocated: rows.reduce((sum, row) => sum + Number(row.allocated || 0), 0),
+    pending: rows.reduce((sum, row) => sum + Number(row.pending || 0), 0),
+    finished: rows.reduce((sum, row) => sum + Number(row.completed || 0), 0),
+    hours: averageHours(rows, 'avg_completion_hours'),
+  };
 
   return (
     <div className="space-y-4">
@@ -169,10 +156,11 @@ export default function TelecallerReportPage() {
         <h1 className="text-[17px] font-bold text-slate-900 tracking-tight">Telecaller performance</h1>
         <p className="text-xs text-slate-500">Allocation, contacts, completion, abandoned leads, and active workload</p>
       </div>
-      <ReportFilters filters={filters} setFilters={setFilters} cities={data?.cities || []} telecallers={rows} />
+      <ReportFilters filters={filters} onApply={setFilters} cities={data?.cities || []} telecallers={rows} />
       {error && <Alert variant="destructive" className="bg-red-50 border-red-200"><AlertDescription className="text-sm">{error}</AlertDescription></Alert>}
-      {loading ? (
-        <div className="flex justify-center py-16"><Spinner size="lg" variant="primary" /></div>
+      <ReportSummaryCards loading={summaryLoading} allocated={totals.allocated} pending={totals.pending} finished={totals.finished} averageHours={totals.hours} />
+      {summaryLoading ? (
+        <div className="rounded-lg border border-slate-200 bg-white p-4"><div className="h-4 w-full bg-slate-100 animate-pulse rounded" /></div>
       ) : (
         <div className="rounded-lg border border-slate-200 bg-white overflow-x-auto">
           <table className="w-full text-sm">
@@ -267,23 +255,38 @@ export default function TelecallerReportPage() {
         </AlertDialogContent>
       </AlertDialog>
       <UnassignedLeadsPanel
-        title="Assign unassigned telecaller leads"
-        leads={unassigned.leads || []}
-        staff={(unassigned.telecallers || rows).filter((t) => t.status === 'active')}
+        title="Cases"
+        leads={cases.leads}
+        staff={(cases.extra?.telecallers || rows).filter((t) => t.status === 'active')}
         staffLabel="Telecaller"
         ownerField="telecaller_name"
+        loading={cases.loading}
         assigning={assigning}
         onAssign={handleAssign}
         onAutoAssign={handleAutoAssign}
+        searchValue={cases.searchInput}
+        onSearchChange={cases.setSearchInput}
+        page={cases.page}
+        pageSize={cases.pageSize}
+        total={cases.total}
+        onPageChange={cases.setPage}
+        onDownload={exportJob.start}
+        onDownloadFile={exportJob.download}
+        downloadStatus={exportJob.status}
+        downloadMessage={exportJob.message}
       />
       <ReassignTelecallerLeadsPanel
         telecallers={reassignStaff}
-        leads={assigned.leads || []}
+        leads={assignedCases.leads}
         sourceId={sourceId}
         onSourceChange={setSourceId}
-        loading={assignedLoading}
+        loading={assignedCases.loading}
         assigning={assigning}
         onReassign={handleReassign}
+        page={assignedCases.page}
+        pageSize={assignedCases.pageSize}
+        total={assignedCases.total}
+        onPageChange={assignedCases.setPage}
       />
     </div>
   );
