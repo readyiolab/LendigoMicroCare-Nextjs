@@ -101,6 +101,8 @@ const NAV_ICON_MAP = {
 };
 
 const SIDEBAR_IMAGE_BY_ID = {
+  dashboard: 'dashboard.webp',
+  leads: 'leads.webp',
   sanction: 'sanction.webp',
   payment: 'payments.webp',
   reports: 'reports.webp',
@@ -340,7 +342,7 @@ export default function AdminLayout() {
         onMouseEnter={handleSidebarEnter}
         onMouseLeave={handleSidebarLeave}
         className={cn(
-          'fixed inset-y-0 left-0 z-50 bg-[#F1F1F1] text-[#111111] border-r border-[#E5E5E5]',
+          'fixed inset-y-0 left-0 z-50 bg-[#F1F1F1] text-[#111111] border-r border-[#D4D4D4]',
           'transition-[width,transform] duration-200 ease-out',
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           showWideSidebar ? 'w-[240px] lg:w-[272px]' : 'w-20'
@@ -519,8 +521,8 @@ export default function AdminLayout() {
           'flex min-w-0 flex-1 flex-col bg-[#F1F1F1] transition-[margin] duration-200 ease-out',
           showWideSidebar ? 'lg:ml-[272px]' : 'lg:ml-20'
       )}>
-        <header className="sticky top-0 z-30 border-b border-[#E5E5E5] bg-[#F1F1F1]">
-          <div className="flex h-20 items-center justify-between gap-4 px-6 lg:px-10">
+        <header className="sticky top-0 z-30 border-b border-[#D4D4D4] bg-[#F1F1F1]">
+          <div className="flex h-[72px] items-center justify-between gap-4 px-6">
             <button
               type="button"
               aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
@@ -550,7 +552,7 @@ export default function AdminLayout() {
           </div>
         </header>
 
-        <main className={cn('flex-1 overflow-auto bg-[#F1F1F1]', !isApplicationDetail && 'p-4 lg:p-6')}>
+        <main className={cn('flex-1 overflow-auto bg-[#F1F1F1]', !isApplicationDetail && 'p-6')}>
           <div
             className={cn(
               location.pathname.includes('/admin/applications/fill/') || isApplicationDetail
