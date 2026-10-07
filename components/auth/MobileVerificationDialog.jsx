@@ -185,8 +185,9 @@ export default function MobileVerificationDialog({ isOpen, onClose, initialMobil
                   type="submit" 
                   className="w-full h-11 bg-white hover:bg-slate-100 text-white rounded-lg font-bold text-sm shadow-lg shadow-zinc-100"
                   disabled={loading || otp.length !== 6}
+                  loading={loading}
               >
-                {loading ? <Spinner className="w-4 h-4" /> : 'Verify & Continue'}
+                Verify & Continue
               </Button>
 
               <div className="text-center">

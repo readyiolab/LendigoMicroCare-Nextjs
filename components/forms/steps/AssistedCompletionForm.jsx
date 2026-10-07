@@ -41,11 +41,12 @@ export default function AssistedCompletionForm({ onSuccess, onClose, application
       footer={
         <Button 
             onClick={handleSubmit} 
-            disabled={loading} 
+            disabled={loading}
+            loading={loading}
             className="w-full h-12 text-sm font-black bg-zinc-950 hover:bg-black text-white shadow-xl shadow-zinc-100 rounded-lg transition-all active:scale-[0.98]"
         >
-            {loading ? <Spinner className="w-5 h-5 text-white mr-2" /> : 'FINAL SUBMIT APPLICATION'}
-            {!loading && <ArrowRight className="ml-2 w-4 h-4" />}
+            FINAL SUBMIT APPLICATION
+            <ArrowRight className="ml-2 w-4 h-4" />
         </Button>
       }
     >

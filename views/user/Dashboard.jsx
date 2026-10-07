@@ -761,17 +761,10 @@ export default function Dashboard() {
                     <Button 
                         onClick={canReloan ? handleReloan : handleStartApplication} 
                         disabled={creatingApplication || creditEligibility?.allowed === false}
+                        loading={creatingApplication}
                         className="h-14 px-8 bg-[#222222] hover:bg-[#111111] text-white text-lg font-medium rounded-full shadow-lg hover:shadow-xl transition-all active:scale-[0.98] disabled:opacity-50"
                     >
-                        {creatingApplication ? (
-                            <>
-                              <Spinner className="w-5 h-5 mr-2 text-white" /> Starting...
-                            </>
-                        ) : (
-                            <>
-                              {canReloan ? 'Reloan' : (reapplicationData?.isReturningUser ? 'Start New Application' : 'Get Started')} <ArrowRight className="w-5 h-5 ml-2" />
-                            </>
-                        )}
+                        {canReloan ? 'Reloan' : (reapplicationData?.isReturningUser ? 'Start New Application' : 'Get Started')} <ArrowRight className="w-5 h-5 ml-2" />
                     </Button>
                   </div>
               </div>
@@ -985,24 +978,18 @@ export default function Dashboard() {
                                <Button 
                                    onClick={handleUploadVideoDeclaration}
                                    disabled={!videoFile || uploadingVideo}
+                                   loading={uploadingVideo}
                                    className="w-full h-12 bg-zinc-950 hover:bg-black text-white rounded-lg transition-all active:scale-[0.98]"
                                >
-                                   {uploadingVideo ? (
-                                       <div className="flex items-center gap-3">
-                                           <Spinner className="w-5 h-5 text-white" />
-                                           <span className="text-sm font-semibold">
-                                             {videoProgress > 0 && videoProgress < 100
-                                               ? `Uploading ${videoProgress}%`
-                                               : 'Processing video…'}
-                                           </span>
-                                       </div>
-                                   ) : (
-                                       <div className="flex items-center gap-2">
-                                           <Video className="w-5 h-5" />
-                                           <span className="text-sm font-semibold">Submit video declaration</span>
-                                           <ArrowRight className="w-4 h-4 opacity-60" />
-                                       </div>
-                                   )}
+                                   <div className="flex items-center gap-2">
+                                       <Video className="w-5 h-5" />
+                                       <span className="text-sm font-semibold">
+                                         {uploadingVideo && videoProgress > 0 && videoProgress < 100
+                                           ? `Uploading ${videoProgress}%`
+                                           : 'Submit video declaration'}
+                                       </span>
+                                       <ArrowRight className="w-4 h-4 opacity-60" />
+                                   </div>
                                </Button>
                            </div>
                        </div>
@@ -1029,19 +1016,13 @@ export default function Dashboard() {
                                 variant="outline" 
                                 onClick={() => fetchData(true)}
                                 disabled={refreshing}
+                                loading={refreshing}
                                 className="border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800 transition-all duration-300 min-w-[140px]"
                             >
-                                {refreshing ? (
-                                    <div className="flex items-center gap-2">
-                                        <Spinner className="w-4 h-4 text-amber-600" />
-                                        <span>Checking...</span>
-                                    </div>
-                                ) : (
-                                    <div className="flex items-center gap-2">
-                                        <RefreshCw className="w-4 h-4" />
-                                        <span>Check Status</span>
-                                    </div>
-                                )}
+                                <div className="flex items-center gap-2">
+                                    <RefreshCw className="w-4 h-4" />
+                                    <span>Check Status</span>
+                                </div>
                             </Button>
                         </div>
                     </div>

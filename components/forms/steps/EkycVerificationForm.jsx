@@ -455,15 +455,11 @@ export default function EkycVerificationForm({ onSuccess, onClose, reapplication
           <Button
             onClick={handleCustomerStartEkyc}
             disabled={digioLoading}
+            loading={digioLoading}
             className="w-full h-12 text-sm font-black bg-zinc-950 hover:bg-black text-white shadow-xl shadow-zinc-100 rounded-lg transition-all active:scale-[0.98]"
           >
-            {digioLoading ? <Spinner className="w-5 h-5 text-white mr-2" /> : null}
-            {digioLoading
-              ? 'Starting…'
-              : digilockerInProgress
-                ? 'Continue DigiLocker'
-                : 'Start eKYC'}
-            {!digioLoading && <ArrowRight className="ml-2 w-4 h-4" />}
+            {digilockerInProgress ? 'Continue DigiLocker' : 'Start eKYC'}
+            <ArrowRight className="ml-2 w-4 h-4" />
           </Button>
         ) : (
           <div className="space-y-2 w-full">
@@ -476,13 +472,13 @@ export default function EkycVerificationForm({ onSuccess, onClose, reapplication
             <Button
               onClick={handleSubmit}
               disabled={loading || uploadingCount > 0}
+              loading={loading || uploadingCount > 0}
               className={`w-full h-12 text-sm font-black text-white shadow-xl rounded-lg transition-all active:scale-[0.98] ${
                 isFormIncomplete
                   ? 'bg-zinc-700 hover:bg-zinc-800'
                   : 'bg-zinc-950 hover:bg-black shadow-zinc-200'
               }`}
             >
-              {(loading || uploadingCount > 0) ? <Spinner className="w-5 h-5 text-white mr-2" /> : null}
               {footerLabel}
               {!loading && uploadingCount === 0 && <ArrowRight className="ml-2 w-4 h-4" />}
             </Button>

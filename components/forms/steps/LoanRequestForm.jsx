@@ -154,11 +154,12 @@ export default function LoanRequestForm({ applicationId, targetUserId, onSuccess
             footer={
                 <Button 
                     onClick={handleSubmit} 
-                    disabled={loading || !loanDetails.principalAmount} 
+                    disabled={loading || !loanDetails.principalAmount}
+                    loading={loading}
                     className="w-full h-12 text-sm font-black bg-zinc-950 hover:bg-black text-white shadow-xl shadow-zinc-100 rounded-lg transition-all active:scale-[0.98] uppercase tracking-wide"
                 >
-                    {loading ? <Spinner className="w-5 h-5 text-white mr-2" /> : (isAdminMode ? 'Save & Continue' : 'Submit Application')}
-                    {!loading && <ArrowRight className="ml-2 w-4 h-4" />}
+                    {isAdminMode ? 'Save & Continue' : 'Submit Application'}
+                    <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
             }
         >

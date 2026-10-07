@@ -106,13 +106,12 @@ export default function ESignForm({ applicationId, application, onSuccess, onClo
             <Button 
                 onClick={handleSign} 
                 disabled={!agreed || loading || isPreparing || !requestId}
+                loading={loading}
                 className="w-full h-12 text-sm font-black bg-zinc-950 hover:bg-black text-white shadow-xl shadow-zinc-100 rounded-lg transition-all active:scale-[0.98] uppercase tracking-wide"
             >
-                {loading ? <Spinner className="w-5 h-5 text-white mr-2" /> : (
-                    <span className="flex items-center gap-2">
-                        <PenTool className="w-4 h-4" /> SIGN AGREEMENT
-                    </span>
-                )}
+                <span className="flex items-center gap-2">
+                    <PenTool className="w-4 h-4" /> SIGN AGREEMENT
+                </span>
             </Button>
         }
     >

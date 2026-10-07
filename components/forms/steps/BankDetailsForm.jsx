@@ -205,15 +205,10 @@ export default function BankDetailsForm({ onSuccess, onClose, reapplicationData,
         <Button
           onClick={handleSubmit}
           disabled={loading}
+          loading={loading}
           className="w-full h-10 text-xs font-black bg-zinc-950 hover:bg-black text-white shadow-md shadow-zinc-100 rounded-lg transition-all active:scale-[0.98] uppercase tracking-wide"
         >
-          {loading ? (
-            <Spinner className="mr-2 text-white size-5" />
-          ) : (
-            <>
-               PROCEED TO VERIFICATION <ArrowRight className="ml-2 w-4 h-4" />
-            </>
-          )}
+          PROCEED TO VERIFICATION <ArrowRight className="ml-2 w-4 h-4" />
         </Button>
       }
     >

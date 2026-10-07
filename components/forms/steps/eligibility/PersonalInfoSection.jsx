@@ -135,10 +135,11 @@ const PersonalInfoSection = memo(({ formData, handleInputChange, fieldErrors, is
                           variant="outline"
                           size="sm"
                           disabled={emailVerifyOpening || fieldErrors.personalEmail === 'This email is already linked with another account. Please use a different email address.'}
+                          loading={emailVerifyOpening || emailCheckLoading}
                           className="h-9 px-3 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 font-bold disabled:opacity-50"
                           onClick={onVerifyEmail}
                       >
-                          {(emailVerifyOpening || emailCheckLoading) ? <Spinner className="w-4 h-4" /> : 'Verify'}
+                          Verify
                       </Button>
                   )}
               </div>

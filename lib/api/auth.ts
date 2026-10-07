@@ -60,6 +60,11 @@ export const authAPI = {
       ...(targetUserId != null ? { targetUserId } : {}),
     }),
 
+  sendOfficeEmailOTP: (email: string) =>
+    apiClient.post('/auth/office-email/verify/send', { email }),
+  verifyOfficeEmailOTP: (data: Payload) =>
+    apiClient.post('/auth/office-email/verify/confirm', data),
+
   // Mobile Number Verification
   sendMobileOTP: (data: Payload) => apiClient.post('/auth/mobile/verify/send', data),
   verifyMobileOTP: (data: Payload) => apiClient.post('/auth/mobile/verify/confirm', data),

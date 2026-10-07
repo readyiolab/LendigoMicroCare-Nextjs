@@ -237,18 +237,11 @@ export default function ReferenceForm({
         <Button
           onClick={usePrevious ? handleUsePrevious : handleSubmit}
           disabled={loading}
+          loading={loading}
           className="w-full h-12 text-sm font-semibold bg-[#222222] hover:bg-[#111111] text-white shadow-md rounded-lg transition-all active:scale-[0.98]"
         >
-          {loading ? (
-            <Spinner className="w-5 h-5 text-white mr-2" />
-          ) : usePrevious ? (
-            'CONTINUE WITH PREVIOUS'
-          ) : isEditing || hasExistingRefs ? (
-            'UPDATE REFERENCES'
-          ) : (
-            'SAVE REFERENCES'
-          )}
-          {!loading && <ArrowRight className="ml-2 w-4 h-4" />}
+          {usePrevious ? 'CONTINUE WITH PREVIOUS' : isEditing || hasExistingRefs ? 'UPDATE REFERENCES' : 'SAVE REFERENCES'}
+          <ArrowRight className="ml-2 w-4 h-4" />
         </Button>
       }
     >

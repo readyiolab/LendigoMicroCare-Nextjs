@@ -240,9 +240,10 @@ export default function RepaymentsTab() {
               size="sm"
               onClick={() => fetchPrepayment(undefined, true)}
               disabled={loadingPrepayment}
+              loading={loadingPrepayment}
               className={btnPrimary}
             >
-              {loadingPrepayment ? <Spinner className="w-3.5 h-3.5 border-white" /> : 'Calculate savings'}
+              Calculate savings
             </Button>
           </DetailRow>
           {prepaymentData && (

@@ -203,8 +203,9 @@ export default function Setup2FA() {
                       type="submit"
                       variant="destructive"
                       disabled={loading || verificationToken.length !== 6}
+                      loading={loading}
                     >
-                      {loading ? <Spinner className="size-4" /> : 'Disable 2FA'}
+                      Disable 2FA
                     </Button>
                   </form>
                 </div>
@@ -239,8 +240,8 @@ export default function Setup2FA() {
                   </ol>
                 </div>
 
-                <Button onClick={handleSetup2FA} disabled={loading} className="w-full">
-                  {loading ? <Spinner className="size-4" /> : 'Enable 2FA'}
+                <Button onClick={handleSetup2FA} disabled={loading} loading={loading} className="w-full">
+                  Enable 2FA
                 </Button>
               </div>
             ) : (
@@ -307,9 +308,10 @@ export default function Setup2FA() {
                       <Button
                         type="submit"
                         disabled={loading || verificationToken.length !== 6}
+                        loading={loading}
                         className="flex-1"
                       >
-                        {loading ? <Spinner className="size-4" /> : 'Verify & Enable'}
+                        Verify & Enable
                       </Button>
                     </div>
                   </form>

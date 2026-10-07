@@ -460,8 +460,9 @@ export default function LoanAccountViewTab() {
             className="h-8 px-3 text-xs"
             onClick={() => fetchLoanAccountView?.(true)}
             disabled={loading}
+            loading={loading}
           >
-            {loading ? <Spinner className="h-3.5 w-3.5" /> : 'Retry'}
+            Retry
           </Button>
         </div>
       </div>

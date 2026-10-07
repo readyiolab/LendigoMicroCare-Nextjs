@@ -56,6 +56,12 @@ export default function Account() {
   // Verification Modal State
   const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
   const [isMobileVerifyModalOpen, setIsMobileVerifyModalOpen] = useState(false);
+  const [officeEmailInput, setOfficeEmailInput] = useState('');
+  const [officeOtpStep, setOfficeOtpStep] = useState(false);
+  const [officeOtp, setOfficeOtp] = useState('');
+  const [officeSending, setOfficeSending] = useState(false);
+  const [officeConfirming, setOfficeConfirming] = useState(false);
+  const [officeError, setOfficeError] = useState('');
 
   useEffect(() => {
     fetchUserData();
@@ -77,6 +83,57 @@ export default function Account() {
       setError(err.message || 'Failed to fetch user data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const officeVerified = profile?.officeEmailVerified === true;
+  const savedOfficeEmail = profile?.officeEmail || '';
+
+  const handleSendOfficeEmail = async () => {
+    const email = String(savedOfficeEmail || officeEmailInput || '').trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setOfficeError('Please enter a valid office email address.');
+      return;
+    }
+    setOfficeError('');
+    setOfficeSending(true);
+    try {
+      const response = await authAPI.sendOfficeEmailOTP(email);
+      if (response.status === 1) {
+        setOfficeOtpStep(true);
+        setOfficeOtp('');
+      } else {
+        setOfficeError(response.message || 'Failed to send OTP');
+      }
+    } catch (err) {
+      setOfficeError(err.response?.data?.message || err.message || 'Failed to send OTP');
+    } finally {
+      setOfficeSending(false);
+    }
+  };
+
+  const handleConfirmOfficeEmail = async () => {
+    const email = String(savedOfficeEmail || officeEmailInput || '').trim();
+    if (String(officeOtp).length !== 6) {
+      setOfficeError('Please enter the 6-digit OTP sent to the office email.');
+      return;
+    }
+    setOfficeError('');
+    setOfficeConfirming(true);
+    try {
+      const response = await authAPI.verifyOfficeEmailOTP({ email, otp: officeOtp });
+      if (response.status === 1) {
+        if (response.data?.profile) setProfile(response.data.profile);
+        if (response.data?.user && updateUser) updateUser(response.data.user);
+        setOfficeOtpStep(false);
+        setOfficeOtp('');
+      } else {
+        setOfficeError(response.message || 'Invalid or expired OTP');
+      }
+    } catch (err) {
+      setOfficeError(err.response?.data?.message || err.message || 'Invalid or expired OTP');
+    } finally {
+      setOfficeConfirming(false);
     }
   };
 
@@ -266,6 +323,91 @@ export default function Account() {
                                     </button>
                                 )}
                             </div>
+                        </div>
+
+                        <div className="p-5 hover:bg-zinc-50/50 transition-colors border-t border-zinc-50">
+                            <p className="text-[9px] font-bold uppercase text-slate-500 tracking-widest mb-1.5">Office email</p>
+                            {officeVerified ? (
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <Mail className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                                  <p className="text-sm font-bold text-zinc-900 truncate">{savedOfficeEmail}</p>
+                                </div>
+                                <div className="flex items-center gap-1 text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 shrink-0">
+                                  <CheckCircle2 className="w-2.5 h-2.5" /> Verified
+                                </div>
+                              </div>
+                            ) : officeOtpStep ? (
+                              <div className="space-y-2">
+                                <p className="text-sm font-bold text-zinc-900 truncate">{savedOfficeEmail || officeEmailInput}</p>
+                                <div className="flex items-center gap-1.5">
+                                  <Input
+                                    placeholder="OTP"
+                                    value={officeOtp}
+                                    onChange={(e) => {
+                                      setOfficeOtp(e.target.value.replace(/\D/g, '').slice(0, 6));
+                                      setOfficeError('');
+                                    }}
+                                    className="h-8 w-24 text-[12px] font-bold text-center"
+                                    maxLength={6}
+                                    inputMode="numeric"
+                                    disabled={officeConfirming}
+                                  />
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    className="h-8 text-[11px]"
+                                    loading={officeConfirming}
+                                    disabled={officeOtp.length !== 6}
+                                    onClick={handleConfirmOfficeEmail}
+                                  >
+                                    Confirm
+                                  </Button>
+                                  <button
+                                    type="button"
+                                    className="text-[12px] font-bold text-slate-500 px-1"
+                                    onClick={() => {
+                                      setOfficeOtpStep(false);
+                                      setOfficeOtp('');
+                                      setOfficeError('');
+                                    }}
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5">
+                                {savedOfficeEmail ? (
+                                  <p className="text-sm font-bold text-zinc-900 truncate flex-1">{savedOfficeEmail}</p>
+                                ) : (
+                                  <Input
+                                    placeholder="office@company.com"
+                                    type="email"
+                                    value={officeEmailInput}
+                                    onChange={(e) => {
+                                      setOfficeEmailInput(e.target.value);
+                                      setOfficeError('');
+                                    }}
+                                    className="h-8 text-[12px] font-semibold"
+                                    disabled={officeSending}
+                                  />
+                                )}
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  className="h-8 shrink-0 text-[11px]"
+                                  loading={officeSending}
+                                  disabled={!savedOfficeEmail && !officeEmailInput}
+                                  onClick={handleSendOfficeEmail}
+                                >
+                                  Verify
+                                </Button>
+                              </div>
+                            )}
+                            {officeError ? (
+                              <p className="mt-1.5 text-[11px] font-semibold text-red-600">{officeError}</p>
+                            ) : null}
                         </div>
 
                         <div className="p-5 hover:bg-zinc-50/50 transition-colors border-t border-zinc-50">

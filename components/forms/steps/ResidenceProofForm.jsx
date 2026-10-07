@@ -223,14 +223,11 @@ export default function ResidenceProofForm({ onSuccess, onClose, applicationId, 
               type="button"
               onClick={handleUsePrevious}
               disabled={loading}
+              loading={loading}
               className="w-full h-10 text-xs font-bold bg-white hover:bg-slate-100 text-white shadow-md hover:shadow-lg transition-all uppercase tracking-wide"
             >
-              {loading ? <Spinner className="size-4 text-white" /> : (
-                <>
-                  <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Use Previous Documents & Continue
-                </>
-              )}
+              <CheckCircle2 className="w-4 h-4 mr-2" />
+              Use Previous Documents & Continue
             </Button>
           </div>
         ) : (
@@ -329,14 +326,11 @@ export default function ResidenceProofForm({ onSuccess, onClose, applicationId, 
           <Button
             type="submit"
             disabled={loading || !files[0] || !files[1]}
+            loading={loading}
             className="w-full h-10 text-xs font-bold bg-white hover:bg-slate-100 text-white shadow-md hover:shadow-lg transition-all uppercase tracking-wide"
           >
-            {loading ? <Spinner className="size-4 text-white" /> : (
-              <>
-                <Upload className="w-4 h-4 mr-2" />
-                Upload Documents
-              </>
-            )}
+            <Upload className="w-4 h-4 mr-2" />
+            Upload Documents
           </Button>
           </form>
         )}

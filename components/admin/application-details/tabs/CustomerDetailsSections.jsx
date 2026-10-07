@@ -29,7 +29,6 @@ import {
 } from '../common/DetailTable';
 import { validateProfileContactUniqueness } from '@/lib/utils/mobile';
 import { isStrictEmail } from '@/lib/apiErrorMessage';
-import { Spinner } from '@/components/ui/spinner';
 import CallRecordingPlayer from '@/components/admin/CallRecordingPlayer';
 import {
   CALL_RECORDING_ACCEPT,
@@ -111,6 +110,7 @@ export default function CustomerDetailsSections() {
   const [refUploadProgress, setRefUploadProgress] = useState(null);
   const [refFormOpen, setRefFormOpen] = useState(false);
   const [nameLookupId, setNameLookupId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const [refForm, setRefForm] = useState({
     id: null,
     reference_name: '',
@@ -443,9 +443,10 @@ export default function CustomerDetailsSections() {
                           }
                         }}
                         disabled={verifyingOfficeOTP || String(officeOTP || '').length !== 6}
+                        loading={verifyingOfficeOTP}
                         className={btnPrimary}
                       >
-                        {verifyingOfficeOTP ? <Spinner className="w-3.5 h-3.5" /> : 'Confirm'}
+                        Confirm
                       </Button>
                       <button
                         type="button"
@@ -490,8 +491,9 @@ export default function CustomerDetailsSections() {
                           }
                         }}
                         disabled={sendingOfficeOTP || (!profile.office_email && !officeEmailInput)}
+                        loading={sendingOfficeOTP}
                       >
-                        {sendingOfficeOTP ? <Spinner className="w-3.5 h-3.5" /> : 'Verify'}
+                        Verify
                       </Button>
                     </div>
                   )
@@ -835,7 +837,15 @@ export default function CustomerDetailsSections() {
                         variant="outline"
                         className="h-7 text-[11px] border-rose-200 text-rose-700 shrink-0"
                         disabled={updating}
-                        onClick={() => handleDeleteApplicationReference(ref.id)}
+                        loading={deletingId === ref.id}
+                        onClick={async () => {
+                          setDeletingId(ref.id);
+                          try {
+                            await handleDeleteApplicationReference(ref.id);
+                          } finally {
+                            setDeletingId(null);
+                          }
+                        }}
                       >
                         Delete
                       </Button>
@@ -867,6 +877,7 @@ export default function CustomerDetailsSections() {
                         size="sm"
                         className={`${btnSecondary} shrink-0`}
                         disabled={updating}
+                        loading={nameLookupId === ref.id}
                         onClick={async () => {
                           setNameLookupId(ref.id);
                           try {
@@ -876,7 +887,7 @@ export default function CustomerDetailsSections() {
                           }
                         }}
                       >
-                        {nameLookupId === ref.id ? 'Checking…' : 'Check name'}
+                        Check name
                       </Button>
                     </>
                   )}
@@ -1027,19 +1038,14 @@ export default function CustomerDetailsSections() {
               type="button"
               onClick={submitRefVerify}
               disabled={updating}
+              loading={updating}
               className={`rounded-lg text-xs px-4 h-8 text-white ${
                 refVerifyStatus === 'failed'
                   ? 'bg-rose-600 hover:bg-rose-700'
                   : 'bg-emerald-600 hover:bg-emerald-700'
               }`}
             >
-              {updating
-                ? typeof refUploadProgress === 'number'
-                  ? `Uploading ${Math.round(refUploadProgress)}%…`
-                  : 'Saving…'
-                : refVerifyStatus === 'failed'
-                  ? 'Mark failed'
-                  : 'Verify reference'}
+              {refVerifyStatus === 'failed' ? 'Mark failed' : 'Verify reference'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1108,6 +1114,7 @@ export default function CustomerDetailsSections() {
                 !refForm.reference_name.trim() ||
                 String(refForm.reference_mobile).replace(/\D/g, '').length !== 10
               }
+              loading={updating}
               onClick={async () => {
                 const localErr = validateProfileContactUniqueness({
                   candidate: refForm.reference_mobile,
@@ -1138,7 +1145,7 @@ export default function CustomerDetailsSections() {
                 }
               }}
             >
-              {updating ? 'Saving…' : refForm.id ? 'Update' : 'Add'}
+              {refForm.id ? 'Update' : 'Add'}
             </Button>
           </DialogFooter>
         </DialogContent>

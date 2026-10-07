@@ -251,14 +251,10 @@ export default function SelfieForm({ onSuccess, onClose, isAdminMode = false, ta
         <Button
           onClick={handleSubmit}
           disabled={loading || !selfieFile || uploadStatus === 'error'}
+          loading={loading}
           className="w-full h-12 text-sm font-black bg-zinc-950 hover:bg-black text-white shadow-xl shadow-zinc-100 rounded-lg transition-all active:scale-[0.98] uppercase tracking-wide"
         >
-          {loading ? (
-            <>
-              <Spinner className="mr-2 text-white size-4" />
-              {uploading ? `Uploading ${progress || 0}%` : 'Saving...'}
-            </>
-          ) : 'SUBMIT SELFIE'}
+          {uploading ? `Uploading ${progress || 0}%` : 'SUBMIT SELFIE'}
         </Button>
       }
     >

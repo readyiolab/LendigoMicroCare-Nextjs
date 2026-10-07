@@ -615,9 +615,10 @@ export default function BankStatementForm({
         <Button
           onClick={handleSubmit}
           disabled={!canSubmit}
+          loading={loading || uploading}
           className="w-full h-12 text-sm font-black bg-zinc-950 hover:bg-black text-white shadow-xl shadow-zinc-100 rounded-lg transition-all active:scale-[0.98]"
         >
-          {loading || uploading ? <Spinner className="w-5 h-5 text-white mr-2" /> : 'COMPLETE SUBMISSION'}
+          COMPLETE SUBMISSION
           {uploading ? ` Uploading ${Math.max(bankUpload.progress, salaryUpload.progress)}%` : null}
           {!loading && !uploading && <ArrowRight className="ml-2 w-4 h-4" />}
         </Button>
@@ -712,10 +713,10 @@ export default function BankStatementForm({
                 type="button"
                 onClick={handleConnectAa}
                 disabled={aaStarting || !applicationId}
+                loading={aaStarting}
                 className="w-full h-11 rounded-lg bg-zinc-950 hover:bg-black text-white text-xs font-black uppercase tracking-widest"
               >
-                {aaStarting ? <Spinner className="w-4 h-4 text-white mr-2" /> : null}
-                {aaStarting ? 'Starting…' : aaPolling ? 'Waiting for consent…' : 'Connect bank'}
+                {aaPolling && !aaStarting ? 'Waiting for consent…' : 'Connect bank'}
               </Button>
               {(aaPolling || aaHostedUrl) && (
                 <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-500 font-medium">
