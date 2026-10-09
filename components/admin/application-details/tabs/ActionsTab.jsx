@@ -171,10 +171,10 @@ export default function ActionsTab() {
     }, [alreadySanctioned, isReadOnly, setStatusUpdate, statusUpdate.status]);
 
     // Clear recommend/approve if BRE rejects while that status is selected —
-    // but never force-reject when case is already recommended/sanctioned (UW path).
+    // but never force-reject when the case is already recommended, sanctioned, or offer sent.
     useEffect(() => {
         if (!breBlocksRecommend) return;
-        if (['recommended', 'approved'].includes(appStatus)) return;
+        if (['recommended', 'approved', 'offer_sent'].includes(appStatus)) return;
         if (['recommended', 'approved', 'offer_sent'].includes(statusUpdate.status)) {
             setStatusUpdate((p) => ({ ...p, status: 'rejected' }));
         }
