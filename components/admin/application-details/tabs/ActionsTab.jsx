@@ -118,8 +118,8 @@ export default function ActionsTab() {
         (!!pendingRevision ||
             loanApp?.internal_status === 'offer_revision_requested' ||
             loanApp?.customer_status === 'offer_revision_requested');
-    /** After UW sanction, Send offer must stay available even if credit verdict is REJECT. */
-    const alreadySanctioned = appStatus === 'approved' || awaitingRevision;
+    /** After UW sanction or a sent offer, Send offer stays available even if credit verdict is REJECT. */
+    const alreadySanctioned = appStatus === 'approved' || appStatus === 'offer_sent' || awaitingRevision;
 
     useEffect(() => {
         if (appStatus !== 'offer_sent' || !loanApp?.id) {
@@ -582,16 +582,14 @@ export default function ActionsTab() {
 
             {/* Right Column: Decisions & CAM */}
             <div className="lg:col-span-12 xl:col-span-8">
-                {isReadOnly || (!awaitingRevision && ['offer_sent', 'esign_completed', 'mandate_pending', 'payment_pending'].includes(loanApp.application_status)) ? (
+                {isReadOnly || ['esign_completed', 'mandate_pending', 'payment_pending'].includes(loanApp.application_status) ? (
                     <div className="bg-emerald-50/50 border border-emerald-100 p-8 rounded-lg flex flex-col items-center text-center">
                         <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-4" />
                         <h4 className="text-sm font-medium text-emerald-900 uppercase tracking-widest mb-2">
-                            {loanApp.application_status === 'offer_sent' ? 'Offer sent' : loanApp.application_status.replace(/_/g, ' ')}
+                            {loanApp.application_status.replace(/_/g, ' ')}
                         </h4>
                         <p className="text-xs text-emerald-700 font-normal max-w-md leading-relaxed">
-                            {loanApp.application_status === 'offer_sent'
-                                ? 'Sanction letter email was sent. Waiting for the customer to accept. No further action needed here — use Back to return to the applications list.'
-                                : 'This step is complete. Manual status changes are locked to protect the audit trail.'}
+                            This step is complete. Manual status changes are locked to protect the audit trail.
                         </p>
                         {loanApp.application_status === 'esign_completed' && (
                             <Button onClick={() => setActiveTab('disbursement')} className="mt-6 rounded-lg bg-emerald-600">
@@ -710,8 +708,16 @@ export default function ActionsTab() {
                             <div className="flex items-start gap-3 p-4 bg-emerald-50 border border-emerald-100 rounded-lg">
                                 <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                                 <div>
-                                    <p className="text-xs font-medium text-emerald-900">Sanctioned — confirm product and amount, then send the offer to the customer.</p>
-                                    <p className="text-[10px] text-emerald-700 mt-0.5">LAN is already issued. Approve again is not needed here.</p>
+                                    <p className="text-xs font-medium text-emerald-900">
+                                        {appStatus === 'offer_sent'
+                                            ? 'The sanction email was sent. Change Platform Fee inside the product range and send the offer again.'
+                                            : 'Sanctioned — confirm product and amount, then send the offer to the customer.'}
+                                    </p>
+                                    <p className="text-[10px] text-emerald-700 mt-0.5">
+                                        {appStatus === 'offer_sent'
+                                            ? 'The customer gets a new sanction email. Amount, tenure, and interest stay on this form.'
+                                            : 'LAN is already issued. Approve again is not needed here.'}
+                                    </p>
                                 </div>
                             </div>
                         )}
