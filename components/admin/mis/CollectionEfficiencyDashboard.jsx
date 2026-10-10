@@ -276,9 +276,9 @@ export default function CollectionEfficiencyDashboard() {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Collection efficiency</h2>
+          <h2 className="text-lg font-semibold text-slate-900">A closer look</h2>
           <p className="text-sm text-slate-500 mt-1">
-            Scheduled repayment is the installment amount due in the selected period. Collected is what was allocated to those installments. Older overdue recoveries are counted separately.
+            The four numbers above are the ones to use day to day. This section splits the same loans by date, agent, and how late they are.
           </p>
         </div>
         <Button type="button" variant="outline" className="h-10 px-4 text-sm border-slate-200" onClick={download} disabled={downloading}>

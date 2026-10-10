@@ -19,7 +19,7 @@ const TIMING_OPTIONS = ['Before due date', 'On due date', 'After due date'];
 const TABS = [
   { id: 'loan-book', label: 'Loan Book' },
   { id: 'payments', label: 'Payments Ledger' },
-  { id: 'efficiency', label: 'Collection Efficiency' },
+  { id: 'efficiency', label: 'How much we collected' },
 ];
 
 const STATUS_TONES = {
@@ -110,19 +110,25 @@ function measureCells(row) {
     moneyOrDash(row.amountDue),
     moneyOrDash(row.collectedCapped),
     pct(row.cePercent),
-    moneyOrDash(row.waiver),
-    pct(row.ceInclWaiverPercent),
     moneyOrDash(row.collectedOnOrBeforeDue),
-    pct(row.onTimeCePercent),
-    countOrDash(row.unpaidLoans),
     moneyOrDash(row.unpaidAmount),
   ];
 }
 
-const MEASURE_HEADERS = ['Loans matured', 'Amount due', 'Collected (capped)', 'CE %', 'Waiver', 'CE % incl. waiver', 'Collected on/before due', 'On-time CE %', 'Unpaid loans', 'Unpaid amount'];
+const MEASURE_HEADERS = ['Loans', 'Money due', 'Money received', 'Share received', 'Received by the due date', 'Still to collect'];
+
+const CE_VIEWS = [
+  { id: 'byDueMonth', label: 'By the month it was due', first: 'Month due' },
+  { id: 'byDueDate', label: 'By the due date', first: 'Due date' },
+  { id: 'byLoanType', label: 'First loan or repeat loan', first: 'Loan' },
+  { id: 'byDisbMonth', label: 'By the month the loan was given', first: 'Month given' },
+  { id: 'byCibilBand', label: 'By credit score', first: 'Credit score' },
+  { id: 'byTicketSize', label: 'By loan amount', first: 'Loan amount' },
+  { id: 'byState', label: 'By state', first: 'State' },
+];
 
 function MeasureTable({ title, first, block }) {
-  const rows = [...(block?.rows || [])];
+  const rows = (block?.rows || []).filter((row) => row.maturedLoans != null);
   if (block?.total) rows.push(block.total);
   return <SectionTable title={title} headers={[first, ...MEASURE_HEADERS]} rows={rows.map(measureCells)} />;
 }
@@ -152,6 +158,28 @@ function fileNameFrom(res, fallback) {
   const header = res?.headers?.['content-disposition'] || '';
   const match = /filename="?([^";]+)"?/i.exec(header);
   return match ? match[1] : fallback;
+}
+
+function EfficiencySummary({ total, asOn }) {
+  if (!total) return null;
+  return (
+    <div className="space-y-3">
+      <h2 className="text-lg font-semibold text-slate-900">How much we collected</h2>
+      <p className="text-sm text-slate-700 leading-6">
+        On {displayDate(asOn)}, {countOrDash(total.maturedLoans)} loans had reached their due date.
+        Customers were supposed to pay ₹{inr(total.amountDue)}. We received ₹{inr(total.collectedCapped)}, which is {pct(total.cePercent)} of that.
+        ₹{inr(total.unpaidAmount)} is still to be collected{total.unpaidLoans ? ` from ${total.unpaidLoans} loans` : ''}.
+        ₹{inr(total.collectedOnOrBeforeDue)} came in on or before the due date ({pct(total.onTimeCePercent)}).
+        {Number(total.waiver) > 0 ? ` ₹${inr(total.waiver)} was written off, so it is neither received nor still to collect.` : ''}
+      </p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <SummaryCard label="Money customers had to pay" value={`₹${inr(total.amountDue)}`} hint={`${countOrDash(total.maturedLoans)} loans`} />
+        <SummaryCard label="Money we received" value={`₹${inr(total.collectedCapped)}`} hint={`${pct(total.cePercent)} of the money due`} tone="text-emerald-700" />
+        <SummaryCard label="Money still to collect" value={`₹${inr(total.unpaidAmount)}`} hint={total.unpaidLoans ? `${total.unpaidLoans} loans` : 'None'} tone="text-red-700" />
+        <SummaryCard label="Received by the due date" value={`₹${inr(total.collectedOnOrBeforeDue)}`} hint={`${pct(total.onTimeCePercent)} of the money due`} />
+      </div>
+    </div>
+  );
 }
 
 function SummaryCard({ label, value, hint, tone = 'text-slate-900' }) {
@@ -196,6 +224,7 @@ export default function LoanBookMisPage() {
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState('');
   const [error, setError] = useState('');
+  const [ceView, setCeView] = useState('byDueMonth');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -296,7 +325,7 @@ export default function LoanBookMisPage() {
           <div className="min-w-0">
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Loan Book MIS</h1>
             <p className="text-sm text-slate-500 mt-1">
-              Loan Book, Payments Ledger and Collection Efficiency, all as on the selected date. Excel downloads one workbook with all three. CSV downloads the open tab.
+              Loan Book, Payments, and How much we collected, all as on the selected date. Excel downloads one workbook. CSV downloads the open tab.
             </p>
             {reconciliation && (
               <p className={cn('text-xs mt-1 font-medium', reconciliation.status === 'OK' ? 'text-emerald-700' : 'text-amber-700')}>
@@ -611,30 +640,51 @@ export default function LoanBookMisPage() {
         </div>
       )}
 
-      {tab === 'efficiency' && <CollectionEfficiencyDashboard />}
-
       {tab === 'efficiency' && (
         loading ? (
           <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
         ) : efficiency ? (
-          <div className="space-y-5">
-            <h2 className="text-lg font-semibold text-slate-900">Matured loan measures</h2>
-            <p className="text-sm text-slate-600">
-              Matured loans only, as on {displayDate(applied.asOnDate)}. Matured means the due date is on or before this date. CE is capped collections divided by amount due. These tables are separate from the installment dashboard above.
-            </p>
-            <MeasureTable title="1. By due month" first="Due month" block={efficiency.byDueMonth} />
-            <MeasureTable title="2. By repayment due date" first="Due date" block={efficiency.byDueDate} />
-            <MeasureTable title="3. By loan type (fresh vs repeat)" first="Loan type" block={efficiency.byLoanType} />
-            <MeasureTable title="4. By disbursal month (vintage)" first="Disb month" block={efficiency.byDisbMonth} />
-            <MeasureTable title="5. By CIBIL band" first="CIBIL band" block={efficiency.byCibilBand} />
-            <MeasureTable title="6. By ticket size" first="Ticket band" block={efficiency.byTicketSize} />
-            <MeasureTable title="7. By state" first="State" block={efficiency.byState} />
-            <SectionTable
-              title="8. DPD bucket (recalculated as-on date)"
-              headers={['DPD bucket', 'Loans', 'Unpaid amount', '% of matured due']}
-              rows={(efficiency.dpd?.rows || []).map((r) => [r.label, r.loanCount ?? '—', moneyOrDash(r.unpaidAmount), r.percentOfMaturedDue == null ? 'n/a' : pct(r.percentOfMaturedDue)])}
-            />
-            <p className="text-xs text-slate-500">{efficiency.dpd?.note}</p>
+          <div className="space-y-4">
+            <EfficiencySummary total={efficiency.byDueMonth?.total} asOn={applied.asOnDate} />
+            <div className="flex flex-wrap gap-2">
+              {CE_VIEWS.map((view) => (
+                <button
+                  key={view.id}
+                  type="button"
+                  onClick={() => setCeView(view.id)}
+                  className={cn('h-8 px-3 rounded-full text-sm border', ceView === view.id ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200')}
+                >
+                  {view.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setCeView('dpd')}
+                className={cn('h-8 px-3 rounded-full text-sm border', ceView === 'dpd' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200')}
+              >
+                How late
+              </button>
+            </div>
+            {ceView === 'dpd' ? (
+              <SectionTable
+                title="How late the remaining money is"
+                headers={['How late', 'Loans', 'Money still to collect', 'Share of money that was due']}
+                rows={(efficiency.dpd?.rows || []).filter((row) => row.loanCount != null).map((row) => [row.label, row.loanCount ?? '—', moneyOrDash(row.unpaidAmount), row.percentOfMaturedDue == null ? '—' : pct(row.percentOfMaturedDue)])}
+              />
+            ) : (
+              <MeasureTable
+                title={CE_VIEWS.find((view) => view.id === ceView)?.label || 'Breakdown'}
+                first={CE_VIEWS.find((view) => view.id === ceView)?.first || 'Group'}
+                block={efficiency[ceView]}
+              />
+            )}
+            <p className="text-xs text-slate-500">Share received is money we received divided by money customers had to pay. It does not go above 100%. Rows with no loans are hidden.</p>
+            <details className="rounded-lg border border-slate-200 bg-white px-4 py-3">
+              <summary className="text-sm font-semibold text-slate-800 cursor-pointer">More detail</summary>
+              <div className="pt-4">
+                <CollectionEfficiencyDashboard />
+              </div>
+            </details>
           </div>
         ) : null
       )}
