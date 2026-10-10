@@ -637,6 +637,12 @@ export const adminAPI = {
   getCollectionEfficiency: (params: QueryParams = {}) =>
     apiClient.get('/admin/mis/collection-efficiency', { params }),
 
+  getCollectionDashboard: (params: QueryParams = {}) =>
+    apiClient.get('/admin/mis/collection-efficiency/dashboard', { params }),
+
+  exportCollectionDashboard: (params: QueryParams = {}) =>
+    apiClient.get('/admin/mis/collection-efficiency/dashboard/export', { params, responseType: 'blob' }),
+
   exportCollectionEfficiency: (params: QueryParams = {}) =>
     apiClient.get('/admin/mis/collection-efficiency/export', { params, responseType: 'blob' }),
 

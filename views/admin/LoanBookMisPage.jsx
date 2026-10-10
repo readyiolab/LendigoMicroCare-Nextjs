@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Download, FileSpreadsheet, Loader2, RefreshCw, RotateCcw } from 'lucide-react';
 import { adminAPI } from '@/lib/api/admin';
+import CollectionEfficiencyDashboard from '@/components/admin/mis/CollectionEfficiencyDashboard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -610,13 +611,16 @@ export default function LoanBookMisPage() {
         </div>
       )}
 
+      {tab === 'efficiency' && <CollectionEfficiencyDashboard />}
+
       {tab === 'efficiency' && (
         loading ? (
           <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
         ) : efficiency ? (
           <div className="space-y-5">
+            <h2 className="text-lg font-semibold text-slate-900">Matured loan measures</h2>
             <p className="text-sm text-slate-600">
-              Matured loans only, as on {displayDate(applied.asOnDate)}. Matured means the due date is on or before this date. CE is capped collections divided by amount due.
+              Matured loans only, as on {displayDate(applied.asOnDate)}. Matured means the due date is on or before this date. CE is capped collections divided by amount due. These tables are separate from the installment dashboard above.
             </p>
             <MeasureTable title="1. By due month" first="Due month" block={efficiency.byDueMonth} />
             <MeasureTable title="2. By repayment due date" first="Due date" block={efficiency.byDueDate} />
