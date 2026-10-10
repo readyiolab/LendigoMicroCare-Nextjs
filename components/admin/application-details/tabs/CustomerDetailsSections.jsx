@@ -855,7 +855,7 @@ export default function CustomerDetailsSections() {
                       </Button>
                     </>
                   )}
-                  {!isReadOnly && canVerifyRefs && (
+                  {canEditRefs && (
                     <>
                       <Button
                         type="button"
