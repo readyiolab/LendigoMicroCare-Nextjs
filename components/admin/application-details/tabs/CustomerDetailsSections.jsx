@@ -97,8 +97,12 @@ export default function CustomerDetailsSections() {
   const canVerifyRefs = ['credit_manager', 'underwriter', 'approver', 'super_admin', 'admin'].includes(role);
   const status = String(loanApp?.application_status || '').toLowerCase();
   const caseFinished = ['disbursed', 'closed', 'defaulted', 'rejected', 'offer_rejected'].includes(status);
-  const canEditRefs = (role === 'super_admin' || role === 'admin')
+  const isOverride = role === 'super_admin' || role === 'admin';
+  const canEditRefs = isOverride
     ? !caseFinished
+    : canVerifyRefs && !isReadOnly;
+  const canVerifyRefRow = isOverride
+    ? !['rejected', 'offer_rejected'].includes(status)
     : canVerifyRefs && !isReadOnly;
   const profile = userData?.profile || {};
   const officeEmailVerified = Number(profile.office_email_verified) === 1;
@@ -855,7 +859,7 @@ export default function CustomerDetailsSections() {
                       </Button>
                     </>
                   )}
-                  {canEditRefs && (
+                  {canVerifyRefRow && (
                     <>
                       <Button
                         type="button"
