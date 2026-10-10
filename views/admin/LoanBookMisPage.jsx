@@ -678,7 +678,7 @@ export default function LoanBookMisPage() {
                 block={efficiency[ceView]}
               />
             )}
-            <p className="text-xs text-slate-500">Share received is money we received divided by money customers had to pay. It does not go above 100%. Rows with no loans are hidden.</p>
+            <p className="text-xs text-slate-500">Money received includes any fine the customer paid, so it can be higher than the money that was due, and the share can be above 100%. Rows with no loans are hidden.</p>
             <details className="rounded-lg border border-slate-200 bg-white px-4 py-3">
               <summary className="text-sm font-semibold text-slate-800 cursor-pointer">More detail</summary>
               <div className="pt-4">
