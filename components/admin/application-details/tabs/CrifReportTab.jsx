@@ -298,7 +298,7 @@ export default function CrifReportTab({ onOpenCreditCheck }) {
   const applicationRef = loanApp?.application_number || applicationId;
 
   const role = String(admin?.role_code || admin?.role || '').toLowerCase();
-  const canRefetch = ['credit_manager', 'super_admin', 'admin'].includes(role);
+  const canRefetch = ['credit_manager', 'underwriter', 'approver', 'super_admin', 'admin'].includes(role);
 
   const [error, setError] = useState('');
   const [jsonFilter, setJsonFilter] = useState('');

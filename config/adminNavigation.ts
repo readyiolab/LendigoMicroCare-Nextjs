@@ -77,8 +77,8 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "Leads",
     icon: "UserPlus",
     children: [
-      { id: "fresh", label: "Fresh", path: "/admin/applications?status=submitted", roles: ["telecaller", "credit_manager", "super_admin", "admin"], icon: "Sparkles" },
-      { id: "drafts", label: "Drafts", path: "/admin/applications?status=draft", roles: ["telecaller", "credit_manager", "super_admin", "admin"], icon: "FileText" },
+      { id: "fresh", label: "Fresh", path: "/admin/applications?status=submitted", roles: ["telecaller", "credit_manager", "underwriter", "approver", "super_admin", "admin"], icon: "Sparkles" },
+      { id: "drafts", label: "Drafts", path: "/admin/applications?status=draft", roles: ["telecaller", "credit_manager", "underwriter", "approver", "super_admin", "admin"], icon: "FileText" },
       { id: "all-apps", label: "All applications", path: "/admin/applications", roles: ["all"], icon: "ClipboardList", badge: "applications" },
       { id: "my-apps", label: "My assigned", path: "/admin/applications?assigned=me", roles: ["telecaller", "credit_manager", "underwriter", "operations_manager", "operations"], icon: "UserCheck" },
       { id: "repeat", label: "Repeat customers", path: "/admin/applications?repeat=1", roles: ["telecaller", "credit_manager", "underwriter", "approver", "super_admin", "admin"], icon: "History" },
@@ -90,10 +90,10 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "Sanction",
     icon: "Shield",
     children: [
-      { id: "under-review", label: "Under review", path: "/admin/applications?status=under_review", roles: ["credit_manager", "super_admin", "admin"], icon: "Eye" },
-      { id: "recommended", label: "Recommended", path: "/admin/applications?status=recommended", roles: ["credit_manager", "underwriter", "super_admin", "admin"], icon: "ThumbsUp" },
+      { id: "under-review", label: "Under review", path: "/admin/applications?status=under_review", roles: ["credit_manager", "underwriter", "approver", "super_admin", "admin"], icon: "Eye" },
+      { id: "recommended", label: "Recommended", path: "/admin/applications?status=recommended", roles: ["credit_manager", "underwriter", "approver", "super_admin", "admin"], icon: "ThumbsUp" },
       { id: "approved", label: "Approved process", path: "/admin/applications?status=approved", roles: ["underwriter", "operations", "operations_manager", "super_admin", "admin"], icon: "ShieldCheck" },
-      { id: "rejected", label: "Rejected process", path: "/admin/applications?status=rejected", roles: ["credit_manager", "underwriter", "super_admin", "admin"], icon: "XCircle" },
+      { id: "rejected", label: "Rejected process", path: "/admin/applications?status=rejected", roles: ["credit_manager", "underwriter", "approver", "super_admin", "admin"], icon: "XCircle" },
     ],
   },
   {

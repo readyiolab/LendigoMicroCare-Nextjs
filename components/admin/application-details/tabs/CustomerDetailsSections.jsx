@@ -94,7 +94,7 @@ export default function CustomerDetailsSections() {
   } = useApplicationContext();
 
   const role = admin?.role_code || admin?.role;
-  const canVerifyRefs = role === 'credit_manager' || role === 'super_admin' || role === 'admin';
+  const canVerifyRefs = ['credit_manager', 'underwriter', 'approver', 'super_admin', 'admin'].includes(String(role || '').toLowerCase());
   const canEditRefs = canVerifyRefs && !isReadOnly;
   const profile = userData?.profile || {};
   const officeEmailVerified = Number(profile.office_email_verified) === 1;

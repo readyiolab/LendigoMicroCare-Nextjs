@@ -90,10 +90,10 @@ function getRoleSectionIds(role, isRepaymentReview) {
   if (r === 'collection_manager') {
     return ['overview', 'loan_history', 'documents', 'kyc', 'verification', 'repayments', 'loan_account', 'history'];
   }
-  if (r === 'underwriter') {
+  if (r === 'underwriter' || r === 'approver') {
     return [
       'overview', 'loan_history', 'documents', 'cam', 'verification', 'kyc', 'payday', 'aa', 'crif',
-      'history', 'journey', 'repayments', 'disbursement', 'loan_account', 'actions',
+      'call_logs', 'history', 'journey', 'repayments', 'disbursement', 'loan_account', 'actions',
     ];
   }
   if (r === 'operations' || r === 'operations_manager') {

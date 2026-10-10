@@ -64,6 +64,7 @@ export default function AdminApplications() {
   const [loadingCreditManagers, setLoadingCreditManagers] = useState(false);
   const creditManagersLoadedRef = useRef(false);
   const [statusCounts, setStatusCounts] = useState({});
+  const countsQueueRef = useRef('');
   // URL is the single source of truth for page / search / filters: one change = one URL update = one fetch
   const urlPage = parseInt(searchParams.get('page') || '1', 10);
   const currentPage = Number.isInteger(urlPage) && urlPage > 0 ? urlPage : 1;
@@ -194,7 +195,11 @@ export default function AdminApplications() {
     clearCache: clearSearchCache
   } = useSearch(
     useCallback((query, signal, { isRefresh } = {}) => {
-        const params = { page: currentPage, limit: pageSize, includeCounts: 'true' };
+        const countsQueueKey = `${admin?.id || ''}|${admin?.role_code || admin?.role || ''}|${urlAssigned || ''}|${urlBucket || ''}`;
+        const queueChanged = countsQueueRef.current !== countsQueueKey;
+        const params = { page: currentPage, limit: pageSize };
+        if (queueChanged || isRefresh) params.includeCounts = 'true';
+        if (queueChanged) countsQueueRef.current = countsQueueKey;
         if (isRefresh) params._t = Date.now();
         if (statusFilter !== 'all') params.status = statusFilter;
         if (query) params.search = query;

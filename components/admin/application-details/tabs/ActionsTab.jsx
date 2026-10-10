@@ -752,6 +752,21 @@ export default function ActionsTab() {
                                                 )}
                                                 <option value="rejected">Reject application</option>
                                             </>
+                                        ) : ['underwriter', 'approver'].includes(String(admin?.role_code || admin?.role || '').toLowerCase()) && !alreadySanctioned ? (
+                                            <>
+                                                <option value="under_review">Under Review</option>
+                                                <option value="pending_pd">Pending PD (personal discussion)</option>
+                                                {!hidePositiveOutcomes && (
+                                                    <option value="recommended">Recommend Approval (send to underwriter)</option>
+                                                )}
+                                                {!hidePositiveOutcomes && (
+                                                    <option value="approved">Approve limit (internal sanction)</option>
+                                                )}
+                                                {!hidePositiveOutcomes && (
+                                                    <option value="offer_sent">Send offer to customer</option>
+                                                )}
+                                                <option value="rejected">Reject application</option>
+                                            </>
                                         ) : alreadySanctioned ? (
                                             <>
                                                 <option value="offer_sent">Send offer to customer</option>

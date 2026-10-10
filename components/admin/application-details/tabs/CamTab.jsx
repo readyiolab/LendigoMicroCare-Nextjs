@@ -469,9 +469,9 @@ export default function CamTab() {
   const role = String(admin?.role || admin?.role_code || '').toLowerCase();
 
   const isOverrideAdmin = role === 'super_admin' || role === 'admin';
-  const canEditCamRole = role === 'credit_manager' || isOverrideAdmin;
-  const canReturnRole = role === 'underwriter' || isOverrideAdmin;
-  const canApproveRole = role === 'underwriter' || isOverrideAdmin;
+  const canEditCamRole = ['credit_manager', 'underwriter', 'approver'].includes(role) || isOverrideAdmin;
+  const canReturnRole = role === 'underwriter' || role === 'approver' || isOverrideAdmin;
+  const canApproveRole = role === 'underwriter' || role === 'approver' || isOverrideAdmin;
   const canViewOnly = role === 'operations' || role === 'operations_manager';
 
   const status = String(loanApp?.application_status || '').toLowerCase();
@@ -670,6 +670,24 @@ export default function CamTab() {
     }
   };
 
+  const refreshCamMeta = async () => {
+    if (!applicationId) return;
+    try {
+      const [camRes, workflowRes] = await Promise.all([
+        adminAPI.getApplicationCam(applicationId),
+        adminAPI.getApplicationWorkflowHistory(applicationId, { limit: 50 }).catch(() => null),
+      ]);
+      const cam = camRes?.data || camRes || {};
+      setCamLock(cam.lock || null);
+      setVersions(cam.versions || []);
+      if (workflowRes?.status === 1) {
+        setWorkflowRows(workflowRes?.data?.rows || []);
+      }
+    } catch {
+      /* The form already shows the saved CAM. */
+    }
+  };
+
   useEffect(() => {
     loadedRef.current = false;
     inputsSigRef.current = '';
@@ -786,8 +804,7 @@ export default function CamTab() {
         override_remark: isCamLocked ? overrideRemark.trim() : undefined,
       });
       setMessage('CAM saved');
-      loadedRef.current = false;
-      await load();
+      refreshCamMeta();
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to save CAM');
     } finally {
