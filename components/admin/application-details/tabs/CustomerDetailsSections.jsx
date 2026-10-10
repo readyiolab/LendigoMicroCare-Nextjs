@@ -93,9 +93,13 @@ export default function CustomerDetailsSections() {
     isReadOnly,
   } = useApplicationContext();
 
-  const role = admin?.role_code || admin?.role;
-  const canVerifyRefs = ['credit_manager', 'underwriter', 'approver', 'super_admin', 'admin'].includes(String(role || '').toLowerCase());
-  const canEditRefs = canVerifyRefs && !isReadOnly;
+  const role = String(admin?.role_code || admin?.role || '').toLowerCase();
+  const canVerifyRefs = ['credit_manager', 'underwriter', 'approver', 'super_admin', 'admin'].includes(role);
+  const status = String(loanApp?.application_status || '').toLowerCase();
+  const caseFinished = ['disbursed', 'closed', 'defaulted', 'rejected', 'offer_rejected'].includes(status);
+  const canEditRefs = (role === 'super_admin' || role === 'admin')
+    ? !caseFinished
+    : canVerifyRefs && !isReadOnly;
   const profile = userData?.profile || {};
   const officeEmailVerified = Number(profile.office_email_verified) === 1;
   const [officeEmailInput, setOfficeEmailInput] = useState(profile.office_email || '');
