@@ -28,6 +28,38 @@ function today() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+/** 10-10-2026, 10/10/2026, 10.10.2026, or 2026-10-10. Empty string when it is not a real day. */
+function toIsoDate(value) {
+  const raw = String(value || '').trim();
+  const s = /^\d{4}-\d{2}-\d{2}/.test(raw) ? raw.slice(0, 10) : raw;
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  const dmy = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/.exec(s);
+  let y;
+  let m;
+  let d;
+  if (iso) {
+    y = Number(iso[1]);
+    m = Number(iso[2]);
+    d = Number(iso[3]);
+  } else if (dmy) {
+    d = Number(dmy[1]);
+    m = Number(dmy[2]);
+    y = Number(dmy[3]);
+  } else {
+    return '';
+  }
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return '';
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+function toSheetDate(value) {
+  const iso = toIsoDate(value);
+  if (!iso) return String(value || '');
+  const [y, m, d] = iso.split('-');
+  return `${d}-${m}-${y}`;
+}
+
 function unwrap(res) {
   return res?.data?.data ?? res?.data ?? {};
 }
@@ -59,9 +91,9 @@ function clientFlags(lines) {
     if (!line.lan) notes.push('LAN is empty');
     else if ((lanCount.get(line.lan) || 0) > 1) notes.push('Duplicate LAN');
     const utr = line.bankReference.trim();
-    if (utr.length < 5) notes.push('UTR must be at least 5 characters');
+    if (utr.length < 5) notes.push('Fill the bank UTR');
     else if ((utrCount.get(utr.toUpperCase()) || 0) > 1) notes.push('Duplicate UTR');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(line.disbursalDate || '')) notes.push('Date must be YYYY-MM-DD');
+    if (!toIsoDate(line.disbursalDate)) notes.push('Write the date like 10-10-2026');
     return notes.join('. ');
   });
 }
@@ -75,7 +107,7 @@ function parseTableText(text) {
     .map((cells) => ({
       lan: cells[0] || '',
       bankReference: cells[1] || '',
-      disbursalDate: cells[2] || today(),
+      disbursalDate: toIsoDate(cells[2]) || cells[2] || today(),
       remark: cells[3] || '',
       name: '',
     }));
@@ -158,8 +190,8 @@ export default function BulkPunchDialog({ open, onOpenChange, rows, onFinished }
   };
 
   const downloadTemplate = () => {
-    const header = 'LAN,UTR,Disbursal Date,Remark';
-    const body = lines.map((line) => [line.lan, line.bankReference, line.disbursalDate, line.remark]
+    const header = 'LAN,Bank UTR,Disbursal Date (10-10-2026),Remark';
+    const body = lines.map((line) => [line.lan, line.bankReference, toSheetDate(line.disbursalDate), line.remark]
       .map((cell) => `"${String(cell || '').replace(/"/g, '""')}"`)
       .join(','));
     const blob = new Blob([[header, ...body].join('\n')], { type: 'text/csv;charset=utf-8' });
@@ -337,7 +369,7 @@ export default function BulkPunchDialog({ open, onOpenChange, rows, onFinished }
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold text-slate-900">Bulk punch</DialogTitle>
           <DialogDescription className="text-sm text-slate-500">
-            {stage === 'prepare' && 'Enter UTR, disbursal date, and an optional remark. The server decides which loans can be punched.'}
+            {stage === 'prepare' && 'Download the sheet. Fill the loan number, the bank UTR, and the date the money was sent, like 10-10-2026. Then upload the sheet.'}
             {stage === 'validate' && 'Review ready, duplicate, and invalid rows before submitting.'}
             {stage === 'processing' && 'The batch is punching in the background. This page updates every few seconds.'}
           </DialogDescription>
@@ -398,7 +430,7 @@ export default function BulkPunchDialog({ open, onOpenChange, rows, onFinished }
                         <Input className="h-8" value={line.bankReference} onChange={(e) => updateLine(index, { bankReference: e.target.value })} />
                       </TableCell>
                       <TableCell>
-                        <Input className="h-8" type="date" value={String(line.disbursalDate || '').slice(0, 10)} onChange={(e) => updateLine(index, { disbursalDate: e.target.value })} />
+                        <Input className="h-8" type="date" value={toIsoDate(line.disbursalDate)} onChange={(e) => updateLine(index, { disbursalDate: e.target.value })} />
                       </TableCell>
                       <TableCell>
                         <Input className="h-8" value={line.remark} onChange={(e) => updateLine(index, { remark: e.target.value })} />
