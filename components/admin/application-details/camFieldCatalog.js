@@ -4,6 +4,28 @@ function istTodayISO() {
   return new Date(Date.now() + 330 * 60 * 1000).toISOString().slice(0, 10);
 }
 
+/** Platform fee choices: 1%–20%, default 10%. */
+export const PF_PCT_OPTIONS = Array.from({ length: 20 }, (_, i) => {
+  const n = i + 1;
+  return { value: String(n), label: `${n}%` };
+});
+
+/** Daily ROI choices. Stored values stay the numbers the calculator already uses. */
+export const ROI_PCT_OPTIONS = [
+  { value: '1', label: '1.0%' },
+  { value: '0.9', label: '0.9%' },
+  { value: '0.85', label: '0.85%' },
+  { value: '0.8', label: '0.8%' },
+  { value: '0.7', label: '0.7%' },
+  { value: '0.6', label: '0.6%' },
+  { value: '0.5', label: '0.5%' },
+  { value: '0.4', label: '0.4%' },
+  { value: '0.3', label: '0.3%' },
+  { value: '0.2', label: '0.2%' },
+  { value: '0.1', label: '0.1%' },
+  { value: '0', label: '0' },
+];
+
 /**
  * Structured CAM particulars — mirrors backend camFieldCatalog.js
  */
@@ -35,9 +57,9 @@ export const FIELD_DEFS = [
   { key: 'foir_difference_pct', label: 'FOIR Difference (%)', type: 'number', role: 'calculated', section: 'loan' },
   { key: 'foir_enhanced_by_pct', label: 'FOIR Difference (%)', type: 'number', role: 'calculated', section: 'loan' },
 
-  { key: 'admin_fee_pct', label: 'Platform Fee / PF (%)', type: 'number', role: 'input', section: 'fees' },
+  { key: 'admin_fee_pct', label: 'Platform Fee / PF (%)', type: 'select', options: PF_PCT_OPTIONS, placeholder: 'Choose...', role: 'input', section: 'fees' },
   { key: 'gst_pct', label: 'GST (%)', type: 'number', role: 'input', section: 'fees' },
-  { key: 'roi_pct', label: 'ROI (%)', type: 'number', role: 'input', section: 'fees' },
+  { key: 'roi_pct', label: 'ROI (%)', type: 'select', options: ROI_PCT_OPTIONS, placeholder: 'Choose...', role: 'input', section: 'fees' },
   { key: 'roi_frequency', label: 'ROI Frequency', type: 'text', role: 'calculated', section: 'fees' },
   { key: 'penal_roi', label: 'Penal ROI (%)', type: 'number', role: 'input', section: 'fees' },
   { key: 'disbursal_date', label: 'Disbursal Date', type: 'date', role: 'input', section: 'fees' },

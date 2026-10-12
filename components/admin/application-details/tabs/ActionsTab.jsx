@@ -363,11 +363,10 @@ export default function ActionsTab() {
                 }
                 const rateTouched = String(p.interestRateDaily ?? '') !== String(statusUpdate.interestRateDaily ?? '');
                 const nextRate = rateTouched ? p.interestRateDaily : rate;
-                const clampedRate = Number.isFinite(Number(nextRate))
-                    ? Math.min(
-                        Math.max(Number(nextRate), Number(product.min_interest_rate_daily)),
-                        Number(product.max_interest_rate_daily)
-                    )
+                const numericRate = Number(nextRate);
+                const maxRate = Number(product.max_interest_rate_daily);
+                const clampedRate = Number.isFinite(numericRate)
+                    ? Math.min(Math.max(numericRate, 0), Number.isFinite(maxRate) ? maxRate : numericRate)
                     : p.interestRateDaily;
                 return {
                     ...p,
@@ -823,7 +822,7 @@ export default function ActionsTab() {
                                             {' · '}
                                             Tenure {selectedProduct.min_tenure_days}–{selectedProduct.max_tenure_days} days
                                             {' · '}
-                                            Rate {selectedProduct.min_interest_rate_daily}–{selectedProduct.max_interest_rate_daily}% / day
+                                            Rate 0–{selectedProduct.max_interest_rate_daily}% / day
                                             {loadingProducts ? ' · loading limits…' : ''}
                                           </p>
                                         )}
@@ -875,7 +874,7 @@ export default function ActionsTab() {
                                             <Input
                                               type="number"
                                               step="0.01"
-                                              min={selectedProduct?.min_interest_rate_daily}
+                                              min={0}
                                               max={selectedProduct?.max_interest_rate_daily}
                                               className="rounded-lg h-9 border-slate-200 bg-slate-50 text-sm font-mono"
                                               value={statusUpdate.interestRateDaily}

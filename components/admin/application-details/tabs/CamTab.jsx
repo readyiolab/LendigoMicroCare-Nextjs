@@ -93,10 +93,36 @@ function AuditHint({ audit }) {
   );
 }
 
+function selectChoices(field) {
+  return (field.options || []).map((opt) => (
+    typeof opt === 'object' && opt != null
+      ? { value: String(opt.value), label: String(opt.label ?? opt.value) }
+      : { value: String(opt), label: String(opt) }
+  ));
+}
+
+function matchedSelectValue(options, raw) {
+  const text = String(raw ?? '').trim();
+  if (!text) return '';
+  const exact = options.find((opt) => opt.value === text);
+  if (exact) return exact.value;
+  const n = Number(text.replace(/,/g, ''));
+  if (!Number.isFinite(n)) return '';
+  const byNum = options.find((opt) => Number(opt.value) === n);
+  return byNum ? byNum.value : '';
+}
+
 function FieldCell({ field, value, onChange, disabled, readOnly, audit, emphasize, manual }) {
   const locked = readOnly || field.role === 'calculated' || disabled;
   const common = `h-8 w-full text-xs${emphasize ? ' font-semibold text-slate-900' : ' text-slate-700'}`;
   const ring = manual ? ' ring-1 ring-amber-300 border-amber-200 bg-amber-50/40' : '';
+  const choices = field.type === 'select' ? selectChoices(field) : [];
+  const matched = matchedSelectValue(choices, value);
+  const selectOptions = matched || value === '' || value == null
+    ? choices
+    : [...choices, { value: String(value), label: `${value}%` }];
+  const selectedValue = matched || (value === '' || value == null ? '' : String(value));
+  const selectedLabel = selectOptions.find((opt) => opt.value === selectedValue)?.label || value;
 
   if (locked) {
     return (
@@ -107,7 +133,7 @@ function FieldCell({ field, value, onChange, disabled, readOnly, audit, emphasiz
             : 'border-slate-100 bg-slate-50 text-slate-700'
         }${manual ? ' ring-1 ring-amber-200' : ''}`}
       >
-        <span className="flex-1 truncate">{value || '—'}</span>
+        <span className="flex-1 truncate">{(field.type === 'select' ? selectedLabel : value) || '—'}</span>
         <AuditHint audit={audit} />
       </span>
     );
@@ -140,14 +166,14 @@ function FieldCell({ field, value, onChange, disabled, readOnly, audit, emphasiz
     return (
       <select
         className={`${common} rounded-md border border-slate-200 bg-white px-2${ring}`}
-        value={value || ''}
+        value={selectedValue}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
       >
-        <option value="">—</option>
-        {(field.options || []).map((opt) => (
-          <option key={opt} value={opt}>
-            {opt}
+        <option value="">{field.placeholder || '—'}</option>
+        {selectOptions.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
           </option>
         ))}
       </select>
