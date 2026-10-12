@@ -31,7 +31,7 @@ export default function DigitapKycTab() {
     const { 
         data, userData, loanApp, handleInitiateDigioKYC, handleVerifyBankDetails, handleManualVerifyBank, handleUpdateDisbursalBankDetails, handleManualVerifyPan, 
         handleInitiateEsign, handleFaceMatch, handleLivenessCheck, handleRejectSelfie, updating, isReadOnly, isClosed,
-        handleInitiateMandate, handleManualVerifyMandate, handleResendMandateAuthLink, mandateRegistration, fetchKycSection, fetchBankSection,
+        handleInitiateMandate, handleManualVerifyMandate, handleResendMandateAuthLink, mandateRegistration, fetchKycSection, fetchBankSection, fetchApplication,
         handleVerifyEmployment,
         error, message, admin, selfieCheckFeedback,
         isEsignProcessing,
@@ -51,6 +51,34 @@ export default function DigitapKycTab() {
 
     const refreshKycSections = async () => {
         await Promise.all([fetchKycSection(true), fetchBankSection(true)]);
+    };
+
+    const reloadEsignView = async () => {
+        await fetchApplication?.(true);
+        await refreshKycSections();
+    };
+
+    const esignStillWaiting = () => {
+        const status = String(data?.application?.esign_status || '').toLowerCase();
+        const appId = loanApp?.id || data?.application?.id || applicationId;
+        const complete = isEsignCompleteForApp(status, data?.esignDocs || [], appId);
+        return !complete && ['sent', 'initiated'].includes(status);
+    };
+
+    const handleRefreshKyc = async () => {
+        if (applicationId && esignStillWaiting()) {
+            setLastAction('esign');
+            setError?.('');
+            try {
+                const response = await adminAPI.checkEsignStatus(applicationId);
+                setMessage?.(response?.data?.message || response?.message || 'E-sign status checked');
+            } catch (err) {
+                setError?.(
+                    err.response?.data?.message || err.message || 'Failed to check e-sign status'
+                );
+            }
+        }
+        await reloadEsignView();
     };
 
     const [runningAction, setRunningAction] = useState(null);
@@ -113,7 +141,7 @@ export default function DigitapKycTab() {
         try {
             const response = await adminAPI.checkEsignStatus(applicationId);
             setMessage?.(response?.data?.message || response?.message || 'E-sign status checked');
-            await refreshKycSections();
+            await reloadEsignView();
         } catch (err) {
             setError?.(
                 err.response?.data?.message || err.message || 'Failed to check e-sign status'
@@ -400,7 +428,7 @@ export default function DigitapKycTab() {
                     <span className="text-sm text-slate-500">KYC</span>
                 )}
                 <Button
-                    onClick={() => handleAction(refreshKycSections, 'refresh')}
+                    onClick={() => handleAction(handleRefreshKyc, 'refresh')}
                     disabled={runningAction === 'refresh'}
                     variant="outline"
                     size="sm"

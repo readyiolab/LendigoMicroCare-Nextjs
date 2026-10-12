@@ -58,6 +58,9 @@ export function useApplicationBootstrap({
     const bankFetchGenRef = useRef(0);
     const kycFetchGenRef = useRef(0);
     const journeyFetchGenRef = useRef(0);
+    const socketRefreshTimerRef = useRef(null);
+    const socketRefreshSectionsRef = useRef(null);
+    const socketRefreshRepaymentsRef = useRef(false);
 
     const applyRepaymentDetailsPayload = useCallback((payload) => {
         if (!payload) return;
@@ -506,6 +509,7 @@ export function useApplicationBootstrap({
                         selfie: section.selfie ?? prev.selfie,
                         pan_verification: section.pan_verification ?? prev.pan_verification,
                         employment: section.employment ?? prev.employment,
+                        esignDocs: Array.isArray(section.esignDocs) ? section.esignDocs : prev.esignDocs,
                         sectionsLoaded: { ...(prev.sectionsLoaded || {}), kyc: true },
                     };
                 });
@@ -669,6 +673,28 @@ export function useApplicationBootstrap({
             return resolvedInternalIdRef.current != null
                 && String(event.applicationId) === String(resolvedInternalIdRef.current);
         };
+        const scheduleLiveRefresh = (sections, { repayments = false } = {}) => {
+            const next = new Set(socketRefreshSectionsRef.current || []);
+            (sections || []).forEach((section) => next.add(section));
+            socketRefreshSectionsRef.current = next;
+            if (repayments) socketRefreshRepaymentsRef.current = true;
+            clearTimeout(socketRefreshTimerRef.current);
+            socketRefreshTimerRef.current = setTimeout(() => {
+                const pending = Array.from(socketRefreshSectionsRef.current || []);
+                socketRefreshSectionsRef.current = null;
+                const wantRepayments = socketRefreshRepaymentsRef.current;
+                socketRefreshRepaymentsRef.current = false;
+                fetchApplication(true, pending);
+                if (pending.includes('kyc') || pending.includes('documents')) {
+                    fetchKycSection(true);
+                }
+                if (pending.includes('bank')) {
+                    fetchBankSection(true);
+                }
+                if (wantRepayments) fetchRepayments(true);
+                prepaymentLoadedKeyRef.current = null;
+            }, 300);
+        };
         const handleApplicationUpdate = (event) => {
             console.log('[ApplicationContext] Received application update:', event);
             if (!eventMatchesApplication(event)) return;
@@ -676,9 +702,9 @@ export function useApplicationBootstrap({
                 fetchRepayments(true);
             } else {
                 const sections = resolveSocketInvalidateSections(event, { source: 'application_updated' });
-                fetchApplication(true, sections);
-                if (repaymentsLoadedRef.current || activeTab === 'repayments') fetchRepayments(true);
-                prepaymentLoadedKeyRef.current = null;
+                scheduleLiveRefresh(sections, {
+                    repayments: repaymentsLoadedRef.current || activeTab === 'repayments',
+                });
             }
             const eventType = (event.type || '').toLowerCase();
             if (eventType === 'esign_initiated' || eventType === 'esign_completed') {
@@ -691,7 +717,7 @@ export function useApplicationBootstrap({
             if (eventMatchesApplication(event)) {
                 setMessage(event.message || 'E-Sign request initiated successfully!');
                 setIsEsignProcessing(false);
-                fetchApplication(true, resolveSocketInvalidateSections(event, { source: 'esign_success' }));
+                scheduleLiveRefresh(resolveSocketInvalidateSections(event, { source: 'esign_success' }));
             }
         };
         const handleEsignError = (event) => {
@@ -704,8 +730,7 @@ export function useApplicationBootstrap({
         };
         const handleKycWebhook = (event) => {
             if (event && event.applicationId && !eventMatchesApplication(event)) return;
-            fetchApplication(true, resolveSocketInvalidateSections(event, { source: 'kyc_webhook' }));
-            prepaymentLoadedKeyRef.current = null;
+            scheduleLiveRefresh(resolveSocketInvalidateSections(event, { source: 'kyc_webhook' }));
         };
 
         socketService.on('APPLICATION_UPDATED', handleApplicationUpdate);
@@ -719,11 +744,14 @@ export function useApplicationBootstrap({
             socketService.off('ESIGN_INITIATED_ERROR', handleEsignError);
             socketService.off('KYC_WEBHOOK_RECEIVED', handleKycWebhook);
             socketService.off('DIGIO_WEBHOOK_RECEIVED', handleKycWebhook);
+            clearTimeout(socketRefreshTimerRef.current);
         };
     }, [
         activeTab,
         applicationId,
         fetchApplication,
+        fetchKycSection,
+        fetchBankSection,
         fetchRepayments,
         isRepaymentReview,
         setError,
