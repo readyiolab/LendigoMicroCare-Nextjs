@@ -1010,6 +1010,8 @@ export default function CamTab() {
                 onClick={() => {
                   const camAmt = Number(String(particulars.loan_recommended || '').replace(/,/g, ''));
                   const camTenure = Math.round(Number(String(particulars.tenure_days || '').replace(/,/g, '')));
+                  const camFee = Number(String(particulars.admin_fee_pct ?? '').replace(/,/g, ''));
+                  const camRoi = Number(String(particulars.roi_pct ?? '').replace(/,/g, ''));
                   setStatusUpdate?.((prev) => {
                     const prevAmt = Number(String(prev.approvedAmount ?? '').replace(/,/g, ''));
                     const next = { ...prev, status: 'offer_sent' };
@@ -1018,6 +1020,12 @@ export default function CamTab() {
                     }
                     if (Number.isFinite(camTenure) && camTenure > 0) {
                       next.tenureDays = camTenure;
+                    }
+                    if (Number.isFinite(camFee)) {
+                      next.feeBreakdown = { ...(prev.feeBreakdown || {}), process_fee: camFee };
+                    }
+                    if (Number.isFinite(camRoi)) {
+                      next.interestRateDaily = camRoi;
                     }
                     return next;
                   });

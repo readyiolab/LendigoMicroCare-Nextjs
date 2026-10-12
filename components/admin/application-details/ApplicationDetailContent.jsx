@@ -249,13 +249,17 @@ export default function ApplicationDetailContent() {
             // Prefill before the form is visible, so nothing the underwriter types can be overwritten
             let camAmt = NaN;
             let camTenure = NaN;
+            let camFee = NaN;
+            let camRoi = NaN;
             try {
                 const camRes = await adminAPI.getApplicationCam(applicationId);
                 const particulars = (camRes?.data || camRes || {}).particulars || {};
                 camAmt = Number(String(particulars.loan_recommended || '').replace(/,/g, ''));
                 camTenure = Math.round(Number(String(particulars.tenure_days || '').replace(/,/g, '')));
+                camFee = Number(String(particulars.admin_fee_pct ?? '').replace(/,/g, ''));
+                camRoi = Number(String(particulars.roi_pct ?? '').replace(/,/g, ''));
             } catch {
-                // Actions tab seeds product defaults when CAM is unavailable
+                // Actions tab seeds from CAM again; send-offer falls back to CAM when the fee is omitted
             }
             setStatusUpdate?.((prev) => {
                 const prevAmt = Number(String(prev.approvedAmount ?? '').replace(/,/g, ''));
@@ -265,6 +269,12 @@ export default function ApplicationDetailContent() {
                 }
                 if (Number.isFinite(camTenure) && camTenure > 0) {
                     next.tenureDays = camTenure;
+                }
+                if (Number.isFinite(camFee)) {
+                    next.feeBreakdown = { ...(prev.feeBreakdown || {}), process_fee: camFee };
+                }
+                if (Number.isFinite(camRoi)) {
+                    next.interestRateDaily = camRoi;
                 }
                 return next;
             });

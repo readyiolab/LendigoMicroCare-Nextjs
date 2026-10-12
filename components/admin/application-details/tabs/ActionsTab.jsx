@@ -38,7 +38,7 @@ const STATUS_OPTION_HELP = {
     under_review: 'Mark case for manual review while verifications continue.',
     pending_pd: 'Personal discussion / telephonic verification pending.',
     recommended: 'Recommend to underwriter with recommended loan amount (all checks must be green).',
-    offer_sent: 'Confirm product and amount, then send. Customer gets SMS/email to accept; then video and e-sign.',
+    offer_sent: 'Confirm the CAM amount, tenure and platform fee, then send. Customer gets SMS/email to accept; then video and e-sign.',
     approved: 'Use CAM → Approve & issue LAN first. After sanction, choose Send offer to customer here.',
     rejected: 'Close application with a reason for the customer.',
 };
@@ -83,9 +83,29 @@ function sortOfferProducts(list) {
     });
 }
 
+function finiteNumber(value) {
+    if (value == null || value === '') return null;
+    const n = Number(String(value).replace(/,/g, ''));
+    return Number.isFinite(n) ? n : null;
+}
+
+function pickLimitProduct(products, preferredId) {
+    const match = preferredId
+        ? products.find((p) => String(p.id) === String(preferredId))
+        : null;
+    return (
+        match ||
+        products.find((p) => Number(p.is_default) === 1 && Number(p.is_active) === 1) ||
+        products.find((p) => Number(p.is_active) === 1) ||
+        products.find((p) => Number(p.is_default) === 1) ||
+        products[0] ||
+        null
+    );
+}
+
 export default function ActionsTab() {
     const { 
-        loanApp, admin, statusUpdate, setStatusUpdate, handleStatusUpdate, 
+        loanApp, applicationId, admin, statusUpdate, setStatusUpdate, handleStatusUpdate, 
         updating, setUpdating, productDetails, isReadOnly, setActiveTab,
         latestBreEvaluation, handleTriggerEvaluation,
         loadingBRE, userData, error, message, fetchApplication, kyc_details,
@@ -195,7 +215,7 @@ export default function ActionsTab() {
             return 'Credit recommended this case. Approve & issue LAN on CAM, then continue to send offer.';
         }
         if (s === 'approved') {
-            return 'Sanctioned. Confirm product and amount below, then send the offer to the customer.';
+            return 'Sanctioned. Confirm the CAM amount, tenure and platform fee, then send the offer to the customer.';
         }
         if (s === 'rejected' || s === 'offer_rejected') {
             return 'Application closed. See History tab for reason.';
@@ -237,7 +257,7 @@ export default function ActionsTab() {
         }
     }, [isSendOffer]);
 
-    // Prefetch all products (with fees) when Decisions tab mounts — underwriter can pick any package
+    // Products stay loaded only for silent amount, tenure and rate limits.
     useEffect(() => {
         let cancelled = false;
         const cached = getCachedOfferProducts();
@@ -265,108 +285,108 @@ export default function ActionsTab() {
         return () => { cancelled = true; };
     }, []);
 
-    // Seed product + fee defaults once when products load for Send offer
+    // Seed amount, tenure and the CAM platform fee once when products load for Send offer.
+    // The loan product supplies min/max limits only. It does not replace the CAM fee %.
     useEffect(() => {
         if (!isSendOffer || !activeProducts.length) return;
-        const seedKey = `offer:${activeProducts.map((p) => p.id).join(',')}`;
-        if (offerSeedKeyRef.current === seedKey) return;
+        const seedKey = `offer:${applicationId || loanApp?.id || ''}:${activeProducts.map((p) => p.id).join(',')}`;
+        if (offerSeedKeyRef.current === seedKey || offerSeedKeyRef.current === `pending:${seedKey}`) return;
+        offerSeedKeyRef.current = `pending:${seedKey}`;
 
-        const match = statusUpdate.productId
-            ? activeProducts.find((p) => String(p.id) === String(statusUpdate.productId))
-            : null;
-        const product =
-            match ||
-            activeProducts.find((p) => Number(p.is_default) === 1 && Number(p.is_active) === 1) ||
-            activeProducts.find((p) => Number(p.is_active) === 1) ||
-            activeProducts.find((p) => Number(p.is_default) === 1) ||
-            activeProducts[0];
-        if (!product) return;
-
-        const feeMap = {};
-        filterActivatableProductFees(product.fees).forEach((f) => {
-            feeMap[f.fee_code] = parseFloat(f.default_value) || 0;
-        });
-
-        const seededAmount = positiveAmountOrEmpty(
-            statusUpdate.approvedAmount,
-            loanApp?.approved_amount,
-            loanApp?.recommended_loan_amount,
-            loanApp?.principal_amount,
-            product.min_amount
-        );
-        const amount = seededAmount ?? Number(product.min_amount) ?? 0;
-        const tenure = parseInt(statusUpdate.tenureDays || loanApp?.tenure_days || product.max_tenure_days, 10);
-        const rate = parseFloat(
-            statusUpdate.interestRateDaily ||
-            loanApp?.applied_interest_rate_daily ||
-            product.default_interest_rate_daily
-        );
-
-        offerSeedKeyRef.current = seedKey;
-        if (!statusUpdate.tenureDays && Number.isFinite(tenure)) {
-            const clamped = Math.min(Math.max(tenure, Number(product.min_tenure_days)), Number(product.max_tenure_days));
-            setTenureClampedFrom(clamped !== tenure ? tenure : null);
-        }
-        setStatusUpdate((p) => {
-            const existingAmt = positiveAmountOrEmpty(p.approvedAmount);
-            const existingFees = p.feeBreakdown || {};
-            const keptOverrides = {};
-            for (const [code, val] of Object.entries(existingFees)) {
-                if (Object.prototype.hasOwnProperty.call(feeMap, code)) {
-                    keptOverrides[code] = val;
-                }
-            }
-            return {
-                ...p,
-                productId: product.id,
-                feeBreakdown: Object.keys(keptOverrides).length ? { ...feeMap, ...keptOverrides } : feeMap,
-                approvedAmount:
-                    existingAmt ??
-                    Math.min(Math.max(amount, Number(product.min_amount)), Number(product.max_amount)),
-                tenureDays: p.tenureDays || Math.min(Math.max(tenure, Number(product.min_tenure_days)), Number(product.max_tenure_days)),
-                interestRateDaily: p.interestRateDaily || Math.min(Math.max(rate, Number(product.min_interest_rate_daily)), Number(product.max_interest_rate_daily)),
-            };
-        });
-    }, [isSendOffer, activeProducts, loanApp, setStatusUpdate, statusUpdate.productId, statusUpdate.approvedAmount, statusUpdate.tenureDays, statusUpdate.interestRateDaily]);
-
-    const applyProductSelection = (productId) => {
-        const product = activeProducts.find((p) => String(p.id) === String(productId));
+        const product = pickLimitProduct(activeProducts, loanApp?.product_id || statusUpdate.productId);
         if (!product) {
-            setStatusUpdate((p) => ({ ...p, productId }));
+            offerSeedKeyRef.current = '';
             return;
         }
-        const feeMap = {};
-        filterActivatableProductFees(product.fees).forEach((f) => {
-            feeMap[f.fee_code] = parseFloat(f.default_value) || 0;
-        });
-        const amount =
-            positiveAmountOrEmpty(
+
+        let cancelled = false;
+        (async () => {
+            let camFee = null;
+            let camRoi = null;
+            const camId = applicationId || loanApp?.id;
+            if (camId) {
+                try {
+                    const camRes = await adminAPI.getApplicationCam(camId);
+                    const particulars = (camRes?.data || camRes || {}).particulars || {};
+                    camFee = finiteNumber(particulars.admin_fee_pct);
+                    camRoi = finiteNumber(particulars.roi_pct);
+                } catch {
+                    camFee = null;
+                    camRoi = null;
+                }
+            }
+            if (cancelled) return;
+
+            const feeMap = {};
+            filterActivatableProductFees(product.fees).forEach((f) => {
+                feeMap[f.fee_code] = parseFloat(f.default_value) || 0;
+            });
+            if (camFee != null) {
+                feeMap.process_fee = camFee;
+            } else {
+                const existingFee = finiteNumber(statusUpdate.feeBreakdown?.process_fee);
+                if (existingFee != null) feeMap.process_fee = existingFee;
+            }
+
+            const seededAmount = positiveAmountOrEmpty(
                 statusUpdate.approvedAmount,
                 loanApp?.approved_amount,
                 loanApp?.recommended_loan_amount,
                 loanApp?.principal_amount,
                 product.min_amount
-            ) ?? Number(product.min_amount);
-        const requestedTenure = parseInt(statusUpdate.tenureDays || product.max_tenure_days, 10);
-        if (Number.isFinite(requestedTenure)) {
-            const clamped = Math.min(
-                Math.max(requestedTenure, Number(product.min_tenure_days)),
-                Number(product.max_tenure_days)
             );
-            setTenureClampedFrom(clamped !== requestedTenure ? requestedTenure : null);
-        }
-        setStatusUpdate((p) => ({
-            ...p,
-            productId: product.id,
-            feeBreakdown: feeMap,
-            approvedAmount: Math.min(Math.max(amount, Number(product.min_amount)), Number(product.max_amount)),
-            tenureDays: Math.min(
-                Math.max(parseInt(p.tenureDays || product.max_tenure_days, 10), Number(product.min_tenure_days)),
-                Number(product.max_tenure_days)
-            ),
-            interestRateDaily: Number(product.default_interest_rate_daily),
-        }));
-    };
+            const amount = seededAmount ?? Number(product.min_amount) ?? 0;
+            const tenure = parseInt(statusUpdate.tenureDays || loanApp?.tenure_days || product.max_tenure_days, 10);
+            const rate = camRoi ?? parseFloat(
+                statusUpdate.interestRateDaily ||
+                loanApp?.applied_interest_rate_daily ||
+                product.default_interest_rate_daily
+            );
+
+            offerSeedKeyRef.current = seedKey;
+            if (!statusUpdate.tenureDays && Number.isFinite(tenure)) {
+                const clamped = Math.min(Math.max(tenure, Number(product.min_tenure_days)), Number(product.max_tenure_days));
+                setTenureClampedFrom(clamped !== tenure ? tenure : null);
+            }
+            setStatusUpdate((p) => {
+                const existingAmt = positiveAmountOrEmpty(p.approvedAmount);
+                const existingFees = p.feeBreakdown || {};
+                const feeTouched = JSON.stringify(existingFees) !== JSON.stringify(statusUpdate.feeBreakdown || {});
+                const keptOverrides = {};
+                if (feeTouched) {
+                    for (const [code, val] of Object.entries(existingFees)) {
+                        if (val == null || val === '') continue;
+                        if (Object.prototype.hasOwnProperty.call(feeMap, code) || code === 'process_fee') {
+                            keptOverrides[code] = val;
+                        }
+                    }
+                }
+                const rateTouched = String(p.interestRateDaily ?? '') !== String(statusUpdate.interestRateDaily ?? '');
+                const nextRate = rateTouched ? p.interestRateDaily : rate;
+                const clampedRate = Number.isFinite(Number(nextRate))
+                    ? Math.min(
+                        Math.max(Number(nextRate), Number(product.min_interest_rate_daily)),
+                        Number(product.max_interest_rate_daily)
+                    )
+                    : p.interestRateDaily;
+                return {
+                    ...p,
+                    productId: loanApp?.product_id || p.productId || product.id,
+                    feeBreakdown: feeTouched ? { ...feeMap, ...keptOverrides } : feeMap,
+                    approvedAmount:
+                        existingAmt ??
+                        Math.min(Math.max(amount, Number(product.min_amount)), Number(product.max_amount)),
+                    tenureDays: p.tenureDays || Math.min(Math.max(tenure, Number(product.min_tenure_days)), Number(product.max_tenure_days)),
+                    interestRateDaily: clampedRate,
+                };
+            });
+        })();
+
+        return () => {
+            cancelled = true;
+            if (offerSeedKeyRef.current === `pending:${seedKey}`) offerSeedKeyRef.current = '';
+        };
+    }, [isSendOffer, activeProducts, loanApp, applicationId, setStatusUpdate, statusUpdate.productId, statusUpdate.approvedAmount, statusUpdate.tenureDays, statusUpdate.interestRateDaily]);
 
     const updateFeePercent = (feeCode, value) => {
         setStatusUpdate((p) => ({
@@ -797,40 +817,15 @@ export default function ActionsTab() {
 
                                 {showOfferParams && (
                                      <div className="space-y-3 md:col-span-2 animate-in slide-in-from-right-4">
-                                        {isSendOffer && (
-                                          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50/80 p-3">
-                                            <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">
-                                              Loan product
-                                            </label>
-                                            <select
-                                              value={statusUpdate.productId || ''}
-                                              onChange={(e) => applyProductSelection(e.target.value)}
-                                              disabled={loadingProducts || activeProducts.length === 0}
-                                              className="w-full h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-300"
-                                            >
-                                              {loadingProducts && <option value="">Loading products…</option>}
-                                              {!loadingProducts && activeProducts.length === 0 && (
-                                                <option value="">No loan products</option>
-                                              )}
-                                              {activeProducts.map((p) => (
-                                                <option key={p.id} value={p.id}>
-                                                  {p.product_name}
-                                                  {Number(p.is_default) === 1 ? ' (default)' : ''}
-                                                  {Number(p.is_active) !== 1 ? ' (inactive)' : ''}
-                                                  {` — ₹${Number(p.min_amount).toLocaleString('en-IN')}–₹${Number(p.max_amount).toLocaleString('en-IN')}`}
-                                                </option>
-                                              ))}
-                                            </select>
-                                            {selectedProduct && (
-                                              <p className="text-[11px] text-slate-500 leading-relaxed">
-                                                Amount ₹{Number(selectedProduct.min_amount).toLocaleString('en-IN')}–₹{Number(selectedProduct.max_amount).toLocaleString('en-IN')}
-                                                {' · '}
-                                                Tenure {selectedProduct.min_tenure_days}–{selectedProduct.max_tenure_days} days
-                                                {' · '}
-                                                Rate {selectedProduct.min_interest_rate_daily}–{selectedProduct.max_interest_rate_daily}% / day
-                                              </p>
-                                            )}
-                                          </div>
+                                        {isSendOffer && selectedProduct && (
+                                          <p className="text-[11px] text-slate-500 leading-relaxed">
+                                            Amount ₹{Number(selectedProduct.min_amount).toLocaleString('en-IN')}–₹{Number(selectedProduct.max_amount).toLocaleString('en-IN')}
+                                            {' · '}
+                                            Tenure {selectedProduct.min_tenure_days}–{selectedProduct.max_tenure_days} days
+                                            {' · '}
+                                            Rate {selectedProduct.min_interest_rate_daily}–{selectedProduct.max_interest_rate_daily}% / day
+                                            {loadingProducts ? ' · loading limits…' : ''}
+                                          </p>
                                         )}
 
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -870,7 +865,7 @@ export default function ActionsTab() {
                                               if (flagged == null) return null;
                                               return (
                                                 <p className="text-[11px] leading-snug text-amber-700">
-                                                  Tenure {flagged}d is outside this product&apos;s range ({min}–{max} days). Pick another product or adjust.
+                                                  Tenure {flagged}d is outside the allowed range ({min}–{max} days). Adjust the tenure.
                                                 </p>
                                               );
                                             })()}
@@ -1036,7 +1031,10 @@ export default function ActionsTab() {
                                                             if (amount > 0) feeRows.push({ label, amount });
                                                         });
                                                     } else {
-                                                        feeRows.push({ label: 'Platform Fee (10%)', amount: (P * 10) / 100 });
+                                                        const pct = finiteNumber(statusUpdate.feeBreakdown?.process_fee);
+                                                        if (pct != null && pct > 0) {
+                                                            feeRows.push({ label: `Platform Fee (${pct}%)`, amount: (P * pct) / 100 });
+                                                        }
                                                     }
 
                                                     const subTotalFees = feeRows.reduce((sum, f) => sum + f.amount, 0);
