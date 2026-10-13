@@ -316,6 +316,8 @@ export const adminAPI = {
     const suffix = options?.bustCache === true ? `?_t=${Date.now()}` : '';
     return apiClient.get(`/admin/applications/${applicationId}/kyc${suffix}`);
   },
+  getUnmaskedPan: (applicationId: Id) =>
+    apiClient.get(`/admin/applications/${applicationId}/unmasked-pan`),
   getApplicationBankSection: (applicationId: Id, options: QueryParams = {}) => {
     const bustCache = options?.bustCache === true;
     const suffix = bustCache ? `?_t=${Date.now()}` : '';

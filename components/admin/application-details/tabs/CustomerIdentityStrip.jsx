@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BadgeCheck, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { adminAPI } from '@/lib/api';
 import { useApplicationContext } from '@/components/admin/application-details/context/ApplicationContext';
 import { EMPTY, btnSecondary, btnSuccess } from '../common/DetailTable';
 import { validateProfileContactUniqueness } from '@/lib/utils/mobile';
@@ -40,6 +41,7 @@ function Fact({ label, children }) {
 
 export default function CustomerIdentityStrip() {
   const {
+    applicationId,
     userData,
     selfie,
     admin,
@@ -57,6 +59,7 @@ export default function CustomerIdentityStrip() {
   const [editingPrimaryMobile, setEditingPrimaryMobile] = useState(false);
   const [primaryMobileDraft, setPrimaryMobileDraft] = useState('');
   const [primaryMobileError, setPrimaryMobileError] = useState('');
+  const [fullPan, setFullPan] = useState('');
 
   const profile = userData?.profile || {};
   const selfieSrc = getOptimizedUrl(pickSelfieDisplayUrl({ selfie }), { width: 320 });
@@ -65,10 +68,32 @@ export default function CustomerIdentityStrip() {
   const alternateMobile = String(profile.alternate_mobile || '').replace(/\D/g, '');
   const email = profile.personal_email || userData?.email;
   const emailVerified = profile.personal_email_verified || userData?.personal_email_verified;
-  const pan = profile.pancard || userData?.pancard;
+  const pan =
+    fullPan ||
+    profile.pancard ||
+    userData?.pancard ||
+    profile.pancard_masked ||
+    userData?.pancard_masked;
   const gender = profile.gender
     ? profile.gender.charAt(0).toUpperCase() + profile.gender.slice(1)
     : EMPTY;
+
+  useEffect(() => {
+    if (!applicationId) return undefined;
+    let cancelled = false;
+    setFullPan('');
+    adminAPI
+      .getUnmaskedPan(applicationId)
+      .then((resp) => {
+        if (cancelled || resp?.status !== 1) return;
+        const value = resp.data?.pancard;
+        if (value) setFullPan(String(value).toUpperCase());
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [applicationId]);
 
   return (
     <section className="rounded-md border border-zinc-800 bg-white overflow-hidden">
@@ -175,7 +200,7 @@ export default function CustomerIdentityStrip() {
               </span>
             </Fact>
             <Fact label="PAN card">
-              <span className="inline-flex items-center gap-1 font-mono">
+              <span className="inline-flex items-center gap-1 font-mono whitespace-nowrap">
                 <span>{pan || EMPTY}</span>
                 {profile.pancard_verified ? (
                   <BadgeCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
