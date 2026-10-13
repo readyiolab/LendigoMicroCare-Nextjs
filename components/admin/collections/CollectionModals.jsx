@@ -221,14 +221,22 @@ export function PenaltyModal({ penalty, onClose }) {
   );
 }
 
-export function AddRemarkModal({ remarkModal, remarkForm, setRemarkForm, onSubmit, submitting, onClose }) {
+export function AddRemarkModal({ remarkModal, remarkForm, setRemarkForm, onSubmit, submitting, onClose, notesOnly = false }) {
   if (!remarkModal) return null;
   const isPtp = remarkForm.remarkType === 'promise_to_pay';
   const isVisit = remarkForm.remarkType === 'visit';
+  const outcomeTypes = notesOnly
+    ? REMARK_TYPES.filter((t) => t.value !== 'payment_received')
+    : REMARK_TYPES;
   return (
     <ModalOverlay onClose={onClose} size="lg">
       <div className="bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden">
-        <ModalHeader icon={Plus} title="Call disposition" subtitle="Outcome + follow-up in one step" onClose={onClose} />
+        <ModalHeader
+          icon={Plus}
+          title={notesOnly ? 'Log call' : 'Call disposition'}
+          subtitle={notesOnly ? 'Saves a note only. Money is recorded with Record payment.' : 'Outcome + follow-up in one step'}
+          onClose={onClose}
+        />
         <div className="px-4 py-3 space-y-3">
           <p className="text-xs text-slate-600 bg-slate-50 rounded-lg px-2.5 py-2 border border-slate-100">
             <span className="font-semibold">{remarkModal.borrower_name}</span>
@@ -243,7 +251,7 @@ export function AddRemarkModal({ remarkModal, remarkForm, setRemarkForm, onSubmi
                 onChange={(e) => setRemarkForm({ ...remarkForm, remarkType: e.target.value })}
                 className="mt-1 w-full h-9 px-3 rounded-lg border border-slate-200 text-xs font-medium bg-white"
               >
-                {REMARK_TYPES.map((t) => (
+                {outcomeTypes.map((t) => (
                   <option key={t.value} value={t.value}>
                     {t.label}
                   </option>

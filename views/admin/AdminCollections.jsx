@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import { collectionAPI } from '@/lib/api/collection';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Spinner } from '@/components/ui/spinner';
@@ -29,6 +30,7 @@ const CollectionPunchModal = lazy(() => import('@/components/admin/collections/C
 const CollectionApprovalPanel = lazy(() => import('@/components/admin/collections/CollectionApprovalPanel'));
 const TodayWorkPanel = lazy(() => import('@/components/admin/collections/TodayWorkPanel'));
 const BucketAllocatePanel = lazy(() => import('@/components/admin/collections/BucketAllocatePanel'));
+const CollectionTeamPanel = lazy(() => import('@/components/admin/collections/CollectionTeamPanel'));
 
 import {
   ContactModal,
@@ -45,6 +47,7 @@ const VALID_TABS = [
   'settlements',
   'approval',
   'allocate',
+  'team',
   'bureau',
   'report',
 ];
@@ -84,7 +87,16 @@ function addDaysIso(baseIso, days) {
   return fmtDate(d);
 }
 
+function collectionRoleKey(admin) {
+  return String(admin?.role_code || admin?.role || '').trim().toLowerCase();
+}
+
 export default function AdminCollections() {
+  const { admin } = useAdminAuth();
+  const roleKey = collectionRoleKey(admin);
+  const isExecutive = roleKey === 'collection_executive';
+  const isManager = roleKey === 'collection_manager';
+  const canAllocate = roleKey === 'super_admin' || isManager;
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = VALID_TABS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'dashboard';
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -94,6 +106,18 @@ export default function AdminCollections() {
   const [reportData, setReportData] = useState(null);
   const [error, setError] = useState('');
   const [todayMyQueue, setTodayMyQueue] = useState(false);
+
+  useEffect(() => {
+    if (!roleKey || searchParams.get('tab')) return;
+    if (isExecutive) setActiveTab('today');
+    else if (isManager) setActiveTab('team');
+  }, [roleKey, isExecutive, isManager, searchParams]);
+
+  useEffect(() => {
+    if (isExecutive && (activeTab === 'allocate' || activeTab === 'team')) {
+      setActiveTab('today');
+    }
+  }, [isExecutive, activeTab]);
 
   const [dashPeriod, setDashPeriod] = useState('month');
   const [dashCustomStart, setDashCustomStart] = useState('');
@@ -541,10 +565,15 @@ export default function AdminCollections() {
       icon: ClipboardCheck,
     },
     { id: 'settlements', label: 'Settlements', icon: Scale },
+    { id: 'team', label: 'Team', icon: Users },
     { id: 'allocate', label: 'Assign collectors', icon: Users },
     { id: 'bureau', label: 'Credit bureau report', icon: FileBarChart2 },
     { id: 'report', label: 'Reports', icon: FileBarChart2 },
-  ], [pendingApprovals]);
+  ].filter((tab) => {
+    if (tab.id === 'allocate' && !canAllocate) return false;
+    if (tab.id === 'team' && !canAllocate) return false;
+    return true;
+  }), [pendingApprovals, canAllocate]);
 
   const currentDateStr = useMemo(() => {
     return new Date().toLocaleDateString('en-US', {
@@ -627,14 +656,11 @@ export default function AdminCollections() {
           )}
           {activeTab === 'today' && (
             <TodayWorkPanel
-              myQueue={todayMyQueue}
+              myQueue={isExecutive || isManager || todayMyQueue}
+              showMyQueueToggle={!isExecutive && !isManager}
+              queueLabel={isExecutive ? 'My cases' : isManager ? 'My team' : ''}
               onToggleMyQueue={() => setTodayMyQueue((v) => !v)}
-              onGoOverdue={(loanId) => {
-                setSearchInput(loanId);
-                setFilters((f) => ({ ...f, search: loanId, page: 1 }));
-                handleTabChange('overdue', { loanId });
-              }}
-              onGoApproval={() => handleTabChange('approval')}
+              onGoApproval={isExecutive ? undefined : () => handleTabChange('approval')}
               onGoPtp={() => handleTabChange('ptp', { dueToday: 'true' })}
             />
           )}
@@ -665,7 +691,8 @@ export default function AdminCollections() {
           {activeTab === 'ptp' && <PTPTracker dueToday={ptpDueToday} />}
           {activeTab === 'approval' && <CollectionApprovalPanel />}
           {activeTab === 'settlements' && <SettlementPanel />}
-          {activeTab === 'allocate' && <BucketAllocatePanel />}
+          {activeTab === 'team' && canAllocate && <CollectionTeamPanel />}
+          {activeTab === 'allocate' && canAllocate && <BucketAllocatePanel />}
           {activeTab === 'bureau' && <BureauPanel />}
           {activeTab === 'report' && (
             <CollectionReport

@@ -44,10 +44,7 @@ export default function BucketAllocatePanel() {
     try {
       const res = await collectionAPI.allocateAgents();
       if (res.status === 1) {
-        setMessage(
-          `Assigned ${res.data?.assignedCount || 0} loans` +
-            (res.data?.mode ? ` (${res.data.mode})` : '')
-        );
+        setMessage(res.data?.message || `Assigned ${res.data?.assignedCount || 0} loans`);
       } else {
         setError(res.message || 'Allocation failed');
       }
@@ -60,7 +57,7 @@ export default function BucketAllocatePanel() {
 
   const handleSaveAgent = async () => {
     if (!form.adminId || !form.bucketId) {
-      setError('Select admin and bucket');
+      setError('Select a collection executive and a bucket');
       return;
     }
     setSaving(true);
@@ -85,8 +82,8 @@ export default function BucketAllocatePanel() {
   return (
     <div className="space-y-4">
       <CollectionSection
-        title="Bucket allocation"
-        subtitle="Map collectors to DPD buckets, then assign overdue loans to My Queue"
+        title="Assign collectors"
+        subtitle="Map each collection executive to a DPD bucket, then assign overdue loans to their queue"
       >
         <div className="flex flex-wrap gap-2 mb-4">
           <Button type="button" size="sm" onClick={handleAllocate} disabled={allocating} className="gap-1.5">
@@ -107,10 +104,10 @@ export default function BucketAllocatePanel() {
             value={form.adminId}
             onChange={(e) => setForm((f) => ({ ...f, adminId: e.target.value }))}
           >
-            <option value="">Select admin</option>
+            <option value="">Select collection executive</option>
             {eligibleAdmins.map((a) => (
               <option key={a.id} value={a.id}>
-                {a.full_name} ({a.role_code})
+                {a.full_name}
               </option>
             ))}
           </select>
@@ -132,7 +129,7 @@ export default function BucketAllocatePanel() {
             className="h-9 text-xs"
             value={form.dailyWorkloadLimit}
             onChange={(e) => setForm((f) => ({ ...f, dailyWorkloadLimit: e.target.value }))}
-            placeholder="Daily limit"
+            placeholder="Cases per day"
           />
           <Button type="button" size="sm" className="h-9 gap-1.5" onClick={handleSaveAgent} disabled={saving}>
             <UserPlus className="w-3.5 h-3.5" />
@@ -145,7 +142,7 @@ export default function BucketAllocatePanel() {
         ) : agents.length === 0 ? (
           <p className="text-xs text-slate-500 flex items-center gap-2">
             <Users className="w-3.5 h-3.5" />
-            No agent–bucket mappings yet. Add at least one, or run allocation (falls back to ops admins).
+            No mappings yet. Map an executive to this bucket, then run allocation.
           </p>
         ) : (
           <div className="border border-slate-100 divide-y divide-slate-100">
@@ -153,7 +150,7 @@ export default function BucketAllocatePanel() {
               <div key={a.id} className="px-3 py-2 text-xs flex flex-wrap justify-between gap-2">
                 <span className="font-medium text-slate-800">{a.full_name}</span>
                 <span className="text-slate-500">
-                  {a.bucket_name || a.bucket_code} · limit {a.daily_workload_limit}
+                  {a.bucket_name || a.bucket_code} · {a.daily_workload_limit} cases per day
                 </span>
               </div>
             ))}

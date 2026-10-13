@@ -31,7 +31,7 @@ const getRoleBadgeColor = (roleCode) => {
   return colors[roleCode] || 'bg-slate-50 text-slate-700 border-slate-100';
 };
 
-export default function RoleTable({ roles, onDeleteRole, onAddRole, onEditRole }) {
+export default function RoleTable({ roles, onDeleteRole, onAddRole, onEditRole, readOnly = false }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
@@ -41,9 +41,11 @@ export default function RoleTable({ roles, onDeleteRole, onAddRole, onEditRole }
             Core flow: Credit Manager → Underwriter → Operations. Module screens are separate from stage authority.
           </p>
         </div>
-        <Button onClick={onAddRole} className={cn('h-9 px-3 rounded-md gap-2 text-xs', adminUi.accent)}>
-          <Plus className="w-4 h-4" /> Create New Role
-        </Button>
+        {!readOnly && (
+          <Button onClick={onAddRole} className={cn('h-9 px-3 rounded-md gap-2 text-xs', adminUi.accent)}>
+            <Plus className="w-4 h-4" /> Create New Role
+          </Button>
+        )}
       </div>
 
       <div className={adminUi.tableShell}>
@@ -95,6 +97,9 @@ export default function RoleTable({ roles, onDeleteRole, onAddRole, onEditRole }
                   {role.workflow?.summary || role.description || 'N/A'}
                 </TableCell>
                 <TableCell className="px-3 py-2.5 text-right">
+                  {readOnly ? (
+                    <span className="text-[11px] text-slate-400">View only</span>
+                  ) : (
                   <div className="flex items-center justify-end gap-1">
                     <Button
                       variant="ghost"
@@ -113,6 +118,7 @@ export default function RoleTable({ roles, onDeleteRole, onAddRole, onEditRole }
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

@@ -8,7 +8,7 @@ const RoleFormPage = dynamic(() => import("@/views/admin/RoleFormPage"), { ssr: 
 
 export default function Page() {
   return (
-    <PermissionRouteGuard permissionCode="admin.roles">
+    <PermissionRouteGuard permissionCode="admin.roles" action="can_create">
       <RoleFormPage />
     </PermissionRouteGuard>
   )

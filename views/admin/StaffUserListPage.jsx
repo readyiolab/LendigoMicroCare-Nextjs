@@ -15,6 +15,7 @@ import { dbStatusToUi } from '@/lib/permissionUtils';
 import { getApiErrorMessage } from '@/lib/apiErrorMessage';
 import { format } from 'date-fns';
 import AccessManagementTabs from '@/components/admin/access/AccessManagementTabs';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 
 const PAGE_SIZE = 15;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -71,6 +72,8 @@ function UserAvatar({ user }) {
 
 export default function StaffUserListPage() {
   const navigate = useNavigate();
+  const { admin } = useAdminAuth();
+  const canMutate = String(admin?.role_code || admin?.role || '').toLowerCase() === 'super_admin';
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState('');
@@ -142,12 +145,14 @@ export default function StaffUserListPage() {
             <RefreshCw className={cn('w-3.5 h-3.5', loading && 'animate-spin')} />
             Refresh
           </Button>
-          <Button
-            onClick={() => navigate('/admin/staff-users/new')}
-            className={cn('h-9 px-4 rounded-md gap-2 text-xs', adminUi.accent)}
-          >
-            <Plus className="w-4 h-4" /> Create Profile
-          </Button>
+          {canMutate && (
+            <Button
+              onClick={() => navigate('/admin/staff-users/new')}
+              className={cn('h-9 px-4 rounded-md gap-2 text-xs', adminUi.accent)}
+            >
+              <Plus className="w-4 h-4" /> Create Profile
+            </Button>
+          )}
         </div>
       </div>
 
@@ -214,8 +219,8 @@ export default function StaffUserListPage() {
               ) : users.map((user) => (
                 <TableRow
                   key={user.id}
-                  className={cn(adminUi.tableRowHover, 'cursor-pointer')}
-                  onClick={() => navigate(`/admin/staff-users/${user.id}/edit`)}
+                  className={cn(adminUi.tableRowHover, canMutate && 'cursor-pointer')}
+                  onClick={() => canMutate && navigate(`/admin/staff-users/${user.id}/edit`)}
                 >
                   <TableCell><UserAvatar user={user} /></TableCell>
                   <TableCell className="text-xs text-slate-600">{user.id}</TableCell>
@@ -238,14 +243,18 @@ export default function StaffUserListPage() {
                   <TableCell className="text-[11px] text-slate-500 whitespace-nowrap">{formatCreatedAt(user.created_at)}</TableCell>
                   <TableCell className="text-[11px] text-slate-500 whitespace-nowrap">{formatUpdatedAt(user.updated_at)}</TableCell>
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => navigate(`/admin/staff-users/${user.id}/edit`)}
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </Button>
+                    {canMutate ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => navigate(`/admin/staff-users/${user.id}/edit`)}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                    ) : (
+                      <span className="text-[11px] text-slate-400">View only</span>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

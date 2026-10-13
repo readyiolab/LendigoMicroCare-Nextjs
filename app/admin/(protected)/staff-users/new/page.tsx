@@ -8,7 +8,7 @@ const StaffUserFormPage = dynamic(() => import("@/views/admin/StaffUserFormPage"
 
 export default function Page() {
   return (
-    <PermissionRouteGuard permissionCode="admin.users">
+    <PermissionRouteGuard permissionCode="admin.users" action="can_create">
       <StaffUserFormPage />
     </PermissionRouteGuard>
   )

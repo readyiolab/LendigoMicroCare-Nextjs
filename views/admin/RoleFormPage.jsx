@@ -28,6 +28,8 @@ const BUILTIN_ROLE_CODES = new Set([
   'operations',
   'operations_manager',
   'collection_manager',
+  'collection_executive',
+  'org_admin',
 ]);
 
 export default function RoleFormPage() {

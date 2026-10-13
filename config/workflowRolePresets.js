@@ -88,6 +88,30 @@ export const WORKFLOW_ROLE_CARDS = {
     cannot_do: ['Recommend, approve, or send offers', 'Disburse new loans'],
     next_handoff: null,
   },
+  collection_executive: {
+    stage: 'collection',
+    primary_flow: false,
+    selectable: true,
+    summary: 'Works today’s collection queue for one collection manager.',
+    receives: 'Overdue loans assigned by a collection manager',
+    can_do: [
+      'Log a call, promise, follow-up, or visit',
+      'Record a payment that waits for approval',
+      'See only loans assigned to them',
+    ],
+    cannot_do: ['Assign buckets or other executives', 'Approve payments', 'Recommend, approve, or disburse loans'],
+    next_handoff: null,
+  },
+  org_admin: {
+    stage: 'system',
+    primary_flow: false,
+    selectable: true,
+    summary: 'View staff users and role management. Cannot create, edit, or delete them.',
+    receives: null,
+    can_do: ['View staff users', 'View role management'],
+    cannot_do: ['Create, edit, or delete staff or roles', 'Open loans, collections, or other modules'],
+    next_handoff: null,
+  },
   super_admin: {
     stage: 'system',
     primary_flow: false,
@@ -133,6 +157,8 @@ export function sortRolesForStaffPicker(roles = []) {
     operations_manager: 3,
     telecaller: 4,
     collection_manager: 5,
+    collection_executive: 6,
+    org_admin: 7,
     super_admin: 99,
   };
   return [...roles]

@@ -16,27 +16,34 @@ function normalizeRole(role) {
  * Blocks custom-permission staff from routes they were not granted in the module matrix.
  * Super Admin bypasses; role-only staff rely on API enforcement.
  */
-export function PermissionRouteGuard({ permissionCode, children }) {
+export function PermissionRouteGuard({ permissionCode, action = 'can_view', children }) {
   const { admin } = useAdminAuth();
   const { toast } = useNotifications();
   const notifiedRef = useRef(false);
 
   const roleKey = normalizeRole(admin?.role_code || admin?.role);
   const isSuperAdmin = roleKey === 'super_admin';
+  const isOrgAdmin = roleKey === 'org_admin';
+  const mapReady = !!(admin?.permissionMap && Object.keys(admin.permissionMap).length);
+  const orgAdminViewOnly = action === 'can_view' && (permissionCode === 'admin.users' || permissionCode === 'admin.roles');
+  const orgAdminAllowed = mapReady
+    ? hasPermission(admin.permissionMap, permissionCode, action)
+    : orgAdminViewOnly;
 
   const allowed = isSuperAdmin
-    || !admin?.has_custom_permissions
-    || hasPermission(admin?.permissionMap, permissionCode, 'can_view');
+    || (isOrgAdmin && orgAdminAllowed)
+    || (!isOrgAdmin && !admin?.has_custom_permissions)
+    || (!isOrgAdmin && hasPermission(admin?.permissionMap, permissionCode, action));
 
   useEffect(() => {
-    if (!allowed && admin?.has_custom_permissions && !notifiedRef.current) {
+    if (!allowed && (admin?.has_custom_permissions || isOrgAdmin) && !notifiedRef.current) {
       notifiedRef.current = true;
       toast('Access denied', 'You do not have permission to open this page.');
     }
-  }, [allowed, admin?.has_custom_permissions, permissionCode, toast]);
+  }, [allowed, admin?.has_custom_permissions, isOrgAdmin, permissionCode, toast]);
 
   if (!allowed) {
-    return <Navigate to="/admin/dashboard" replace />;
+    return <Navigate to={isOrgAdmin ? '/admin/staff-users' : '/admin/dashboard'} replace />;
   }
 
   return children;

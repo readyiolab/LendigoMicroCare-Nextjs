@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
-import { HandCoins, MapPin, ClipboardCheck, CalendarClock, ExternalLink } from 'lucide-react';
-import { useNavigate } from '@/lib/router';
+import { ExternalLink } from 'lucide-react';
 import { collectionAPI } from '@/lib/api/collection';
 import { Button } from '@/components/ui/button';
 import { account360Path } from '@/utils/customerIdentity';
 import CollectionSection from '@/components/admin/collections/shared/CollectionSection';
-import { formatInr } from '@/components/admin/collections/shared/collectionUi';
+import { formatInr, formatQueueDate } from '@/components/admin/collections/shared/collectionUi';
+import CollectionCasePanel from '@/components/admin/collections/CollectionCasePanel';
 
-function WorkList({ title, icon: Icon, rows, empty, onOpenLoan, renderMeta }) {
+function WorkList({ title, count, rows, empty, onOpenLoan, renderMeta }) {
+  const total = count ?? rows.length;
   return (
-    <CollectionSection title={title} subtitle={`${rows.length} item${rows.length === 1 ? '' : 's'}`}>
+    <CollectionSection title={title} subtitle={`${total} item${total === 1 ? '' : 's'}`}>
       {rows.length === 0 ? (
         <p className="text-xs text-slate-500">{empty}</p>
       ) : (
@@ -44,11 +45,11 @@ function WorkList({ title, icon: Icon, rows, empty, onOpenLoan, renderMeta }) {
   );
 }
 
-export default function TodayWorkPanel({ myQueue = false, onToggleMyQueue, onGoOverdue, onGoApproval, onGoPtp }) {
-  const navigate = useNavigate();
+export default function TodayWorkPanel({ myQueue = false, queueLabel = '', showMyQueueToggle = true, onToggleMyQueue, onGoApproval, onGoPtp }) {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
+  const [openRow, setOpenRow] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -68,11 +69,7 @@ export default function TodayWorkPanel({ myQueue = false, onToggleMyQueue, onGoO
     load();
   }, [load]);
 
-  const openLoan = (row) => {
-    const loanId = row.loan_application_id || row.loanApplicationId;
-    if (onGoOverdue) onGoOverdue(String(loanId));
-    else navigate(`/admin/collection?tab=overdue&loanId=${loanId}`);
-  };
+  const openLoan = (row) => setOpenRow(row);
 
   if (loading) {
     return <p className="text-sm text-slate-500 p-4">Loading today’s work…</p>;
@@ -90,13 +87,13 @@ export default function TodayWorkPanel({ myQueue = false, onToggleMyQueue, onGoO
         <div>
           <h3 className="text-sm font-semibold text-slate-900">Today’s work</h3>
           <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-0.5">
-            {myQueue ? 'My queue only' : 'All agents'} · PTP {counts.ptpDueToday || 0} · Follow-ups{' '}
+            {queueLabel || (myQueue ? 'My queue only' : 'All agents')} · PTP {counts.ptpDueToday || 0} · Follow-ups{' '}
             {counts.followUpsDue || 0} · Visits {counts.visitRequired || 0} · Approvals{' '}
             {counts.punchesPending || 0}
           </p>
         </div>
         <div className="flex gap-2">
-          {onToggleMyQueue && (
+          {showMyQueueToggle && onToggleMyQueue && (
             <Button
               type="button"
               size="sm"
@@ -122,38 +119,42 @@ export default function TodayWorkPanel({ myQueue = false, onToggleMyQueue, onGoO
         </div>
       </div>
 
+      {openRow ? (
+        <CollectionCasePanel row={openRow} onClose={() => setOpenRow(null)} onSaved={load} />
+      ) : null}
+
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <WorkList
           title="PTP due today"
-          icon={HandCoins}
+          count={counts.ptpDueToday}
           rows={data?.ptpDueToday || []}
           empty="No promises due today"
           onOpenLoan={openLoan}
-          renderMeta={(r) => `${formatInr(r.promise_amount)} · ${r.promise_date}`}
+          renderMeta={(r) => `${formatInr(r.promise_amount)} · ${formatQueueDate(r.promise_date)}`}
         />
         <WorkList
           title="Follow-ups due"
-          icon={CalendarClock}
+          count={counts.followUpsDue}
           rows={data?.followUpsDue || []}
           empty="No follow-ups due"
           onOpenLoan={openLoan}
-          renderMeta={(r) => `${r.follow_up_status || 'open'} · ${r.next_follow_up_date || ''}`}
+          renderMeta={(r) => `${r.follow_up_status || 'open'} · ${formatQueueDate(r.next_follow_up_date)}`}
         />
         <WorkList
           title="Visit required"
-          icon={MapPin}
+          count={counts.visitRequired}
           rows={data?.visitRequired || []}
           empty="No visit-required loans"
           onOpenLoan={openLoan}
           renderMeta={(r) => `DPD ${r.max_dpd || 0}`}
         />
         <WorkList
-          title="Punches pending approval"
-          icon={ClipboardCheck}
+          title="Payments waiting for approval"
+          count={counts.punchesPending}
           rows={data?.punchesPending || []}
-          empty="No pending punches"
-          onOpenLoan={(r) => (onGoApproval ? onGoApproval() : openLoan(r))}
-          renderMeta={(r) => `${r.collection_type || ''} · ${formatInr(r.collected_amount)}`}
+          empty="No payments waiting"
+          onOpenLoan={openLoan}
+          renderMeta={(r) => `${r.collection_type || 'payment'} · ${formatInr(r.collected_amount)}`}
         />
       </div>
     </div>

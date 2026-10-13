@@ -121,7 +121,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { id: "analytics", label: "Analytics", path: "/admin/analytics", roles: ["super_admin", "operations_manager"], icon: "LineChart" },
       { id: "portfolio", label: "Disbursed portfolio", path: "/admin/analytics?tab=portfolio", roles: ["super_admin", "operations_manager"], icon: "PieChart" },
       { id: "cibil", label: "Credit / CIBIL", path: "/admin/cibil", roles: ["super_admin", "operations_manager"], icon: "Activity" },
-      { id: "collection-report", label: "Collection report", path: "/admin/collection?tab=report", roles: ["super_admin", "collection_manager", "operations_manager", "operations", "underwriter"], icon: "TrendingUp" },
+      { id: "collection-report", label: "Collection report", path: "/admin/collection?tab=report", roles: ["super_admin", "collection_manager", "collection_executive", "operations_manager", "operations", "underwriter"], icon: "TrendingUp" },
     ],
   },
   {
@@ -139,9 +139,9 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "Collections",
     icon: "AlertTriangle",
     children: [
-      { id: "coll-dashboard", label: "Collections dashboard", path: "/admin/collection?tab=dashboard", roles: ["super_admin", "collection_manager", "operations_manager", "operations", "underwriter"], icon: "AlertTriangle" },
-      { id: "overdue", label: "Overdue loans", path: "/admin/collection?tab=overdue", roles: ["super_admin", "collection_manager", "operations_manager", "operations", "underwriter"], icon: "AlertCircle" },
-      { id: "ptp", label: "Promise to pay", path: "/admin/collection?tab=ptp", roles: ["super_admin", "collection_manager", "operations_manager", "operations", "underwriter"], icon: "HandCoins" },
+      { id: "coll-dashboard", label: "Collections dashboard", path: "/admin/collection?tab=dashboard", roles: ["super_admin", "collection_manager", "collection_executive", "operations_manager", "operations", "underwriter"], icon: "AlertTriangle" },
+      { id: "overdue", label: "Overdue loans", path: "/admin/collection?tab=overdue", roles: ["super_admin", "collection_manager", "collection_executive", "operations_manager", "operations", "underwriter"], icon: "AlertCircle" },
+      { id: "ptp", label: "Promise to pay", path: "/admin/collection?tab=ptp", roles: ["super_admin", "collection_manager", "collection_executive", "operations_manager", "operations", "underwriter"], icon: "HandCoins" },
     ],
   },
   {
@@ -174,8 +174,8 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     icon: "Settings",
     children: [
       { id: "users", label: "Users", path: "/admin/users", roles: ["super_admin"], icon: "Users" },
-      { id: "staff-users", label: "Staff users", path: "/admin/staff-users", roles: ["super_admin"], icon: "UserCog" },
-      { id: "roles", label: "Role management", path: "/admin/roles", roles: ["super_admin"], icon: "UserCog" },
+      { id: "staff-users", label: "Staff users", path: "/admin/staff-users", roles: ["super_admin", "org_admin"], icon: "UserCog" },
+      { id: "roles", label: "Role management", path: "/admin/roles", roles: ["super_admin", "org_admin"], icon: "UserCog" },
       { id: "credit-buckets", label: "Credit buckets", path: "/admin/credit-buckets", roles: ["super_admin"], icon: "Layers" },
       { id: "products", label: "Loan products", path: "/admin/products", roles: ["super_admin"], icon: "Package" },
     ],
@@ -282,6 +282,15 @@ export function filterNavGroups(
 ): AdminNavGroup[] {
   const { creditBuckets, permissionMap, hasCustomPermissions } = options
   const source = DSA_PARTNER_UI_ENABLED ? groups : groups.filter((g) => g.id !== "dsa")
+
+  if (roleKey === "org_admin") {
+    return source
+      .map((group) => ({
+        ...group,
+        children: (group.children || []).filter((child) => child.id === "staff-users" || child.id === "roles"),
+      }))
+      .filter((group) => group.children.length > 0)
+  }
 
   if (DSA_PARTNER_UI_ENABLED && roleKey === "dsa") {
     const dsaGroup = source.find((g) => g.id === "dsa")

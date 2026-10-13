@@ -29,6 +29,7 @@ const EMPTY_FORM = {
   password: '',
   branch_id: '',
   role_id: '',
+  parent_admin_id: '',
   status: 'active',
   avatar_url: '',
 };
@@ -78,6 +79,7 @@ export default function StaffUserFormPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [branches, setBranches] = useState([]);
   const [roles, setRoles] = useState([]);
+  const [managers, setManagers] = useState([]);
   const [permissionMap, setPermissionMap] = useState({});
   const [customizePermissions, setCustomizePermissions] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -103,12 +105,14 @@ export default function StaffUserFormPage() {
   const permSummary = useMemo(() => countPermissionSummary(permissionMap), [permissionMap]);
 
   const loadMeta = useCallback(async () => {
-    const [branchRes, roleRes] = await Promise.all([
+    const [branchRes, roleRes, managerRes] = await Promise.all([
       roleAPI.getBranches(),
       roleAPI.getRoles({ slim: 'true' }),
+      roleAPI.getAdminUsers({ role: 'collection_manager', limit: 100 }),
     ]);
     if (branchRes.status === 1) setBranches(branchRes.data || []);
     if (roleRes.status === 1) setRoles(roleRes.data || []);
+    if (managerRes.status === 1) setManagers(managerRes.data?.users || []);
   }, []);
 
   const loadUser = useCallback(async () => {
@@ -126,6 +130,7 @@ export default function StaffUserFormPage() {
           password: '',
           branch_id: u.branch_id ? String(u.branch_id) : '',
           role_id: u.role_id ? String(u.role_id) : '',
+          parent_admin_id: u.parent_admin_id ? String(u.parent_admin_id) : '',
           status: u.status || 'active',
           avatar_url: u.avatar_url || '',
         });
@@ -187,6 +192,10 @@ export default function StaffUserFormPage() {
       setError('Please fill all required fields (name, email, branch, role' + (isEdit ? ').' : ', password).'));
       return;
     }
+    if (selectedRole?.role_code === 'collection_executive' && !form.parent_admin_id) {
+      setError('A collection executive must report to a collection manager.');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -209,6 +218,9 @@ export default function StaffUserFormPage() {
         permissions: customizePermissions ? permissionMapToFullArray(permissionMap) : [],
       };
 
+      if (selectedRole?.role_code === 'collection_executive') {
+        payload.parent_admin_id = Number(form.parent_admin_id);
+      }
       if (form.password) payload.password = form.password;
 
       const res = isEdit
@@ -388,6 +400,21 @@ export default function StaffUserFormPage() {
             value={form.role_id}
             onChange={(roleId) => handleRoleChange(roleId)}
           />
+          {selectedRole?.role_code === 'collection_executive' && (
+            <div className="mt-4">
+              <Label className={fieldLabelClass}>Reports to *</Label>
+              <select
+                className={cn(nativeSelectClass, 'mt-1.5')}
+                value={form.parent_admin_id}
+                onChange={(e) => setForm((f) => ({ ...f, parent_admin_id: e.target.value }))}
+              >
+                <option value="">Select collection manager</option>
+                {managers.map((manager) => (
+                  <option key={manager.id} value={manager.id}>{manager.full_name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           {workflowCard && !customizePermissions && (
             <div className="mt-4 flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2.5 text-xs text-blue-900">
               <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />

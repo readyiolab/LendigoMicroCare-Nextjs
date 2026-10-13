@@ -18,10 +18,13 @@ import RoleTable from '@/components/admin/roles/RoleTable';
 import StatusTable from '@/components/admin/roles/StatusTable';
 import AccessManagementTabs from '@/components/admin/access/AccessManagementTabs';
 import { getApiErrorMessage } from '@/lib/apiErrorMessage';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { DsaTableSkeleton } from '@/components/admin/dsa/DsaStatSkeleton';
 
 const AdminRoleManagement = () => {
   const navigate = useNavigate();
+  const { admin } = useAdminAuth();
+  const readOnly = String(admin?.role_code || admin?.role || '').toLowerCase() !== 'super_admin';
   const [searchParams, setSearchParams] = useSearchParams();
   const [roles, setRoles] = useState([]);
   const [statuses, setStatuses] = useState([]);
@@ -201,6 +204,7 @@ const AdminRoleManagement = () => {
           ) : (
             <RoleTable
               roles={roles}
+              readOnly={readOnly}
               onDeleteRole={handleDeleteRole}
               onAddRole={() => navigate('/admin/roles/new')}
               onEditRole={(roleId) => navigate(`/admin/roles/${roleId}/edit`)}

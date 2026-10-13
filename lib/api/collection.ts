@@ -124,6 +124,7 @@ export const collectionAPI = {
   allocateAgents: () => apiClient.post('/admin/collection/buckets/allocate'),
   getTodayWork: (params: QueryParams = {}) =>
     apiClient.get('/admin/collection/today-work', { params }),
+  getCollectionTeam: () => apiClient.get('/admin/collection/team'),
   exportCollectorProductivity: (params: QueryParams = {}) =>
     apiClient.get('/admin/collection/mis/productivity-export', {
       params,

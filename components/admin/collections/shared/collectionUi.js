@@ -19,6 +19,20 @@ export const collectionUi = {
   tabBtnActive: 'text-slate-900 border-slate-900',
 };
 
+export function formatQueueDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  const label = date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const days = Math.round((today.getTime() - start.getTime()) / 86400000);
+  if (days > 0) return `${label} · ${days} day${days === 1 ? '' : 's'} overdue`;
+  return label;
+}
+
 export function formatInr(value, options = {}) {
   const n = Number(value);
   if (!Number.isFinite(n)) return '₹0';
