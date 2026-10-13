@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Landmark,
   RefreshCw,
@@ -14,7 +14,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useApplicationContext } from '../context/ApplicationContext';
 import { adminAPI } from '@/lib/api/admin';
 import { buildCustomerAaConsentMessage } from '@/lib/utils/applicationNextStep';
-import { canExportAaBankExcel, downloadAaBankExcel, downloadSalaryHistoryExcel, downloadPaydayHistoryExcel } from '@/lib/utils/aaBankExcelExport';
+import { canExportAaBankExcel, downloadAaBankExcel } from '@/lib/utils/aaBankExcelExport';
 import { getFeatureCoverage } from '@/lib/utils/creditDecisionDisplay';
 import { aaStatusDisplay } from '@/lib/utils/aaStatusDisplay';
 import { cn } from '@/lib/utils';
@@ -32,32 +32,11 @@ function inr(v) {
   return `₹${n.toLocaleString('en-IN')}`;
 }
 
-function monthKeyFromDate(dateStr) {
-  const s = String(dateStr || '');
-  if (/^\d{4}-\d{2}/.test(s)) return s.slice(0, 7);
-  return '';
-}
-
-function resolveSalarySummary(metrics) {
-  const fromUi = metrics?.ui?.salary_summary;
-  const fromAnalysis =
-    metrics?.summary?.salary || metrics?.analysis_report?.summary?.salary || null;
-  const transactions =
-    metrics?.ui?.salary_transactions ||
-    fromAnalysis?.transactions ||
-    [];
-  if (!fromUi && !fromAnalysis && !transactions.length) return null;
-  return {
-    ...(fromAnalysis || {}),
-    ...(fromUi || {}),
-    transactions,
-  };
-}
-
 export default function AaReportTab({ onOpenCreditCheck }) {
   const {
     loanApp,
     applicationId,
+    admin,
     userData,
     setMessage,
     creditDecisionResult,
@@ -82,8 +61,6 @@ export default function AaReportTab({ onOpenCreditCheck }) {
   const [initiating, setInitiating] = useState(false);
   const [rerunning, setRerunning] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
-  const [exportingSalary, setExportingSalary] = useState(false);
-  const [exportingPayday, setExportingPayday] = useState(false);
   const [autoRemapFailed, setAutoRemapFailed] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(false);
   const pollRef = useRef(null);
@@ -192,31 +169,7 @@ export default function AaReportTab({ onOpenCreditCheck }) {
     }
   };
   const aaDisabledReasons = aaConfigData?.reasons || [];
-  const salarySummary = resolveSalarySummary(metrics);
-  const salaryTxns = Array.isArray(salarySummary?.transactions) ? salarySummary.transactions : [];
-  const salaryByMonth = salaryTxns.reduce((acc, t) => {
-    const key = monthKeyFromDate(t.date);
-    if (!key) return acc;
-    acc[key] = (acc[key] || 0) + Number(t.amount || 0);
-    return acc;
-  }, {});
-  const salaryTotal = salaryTxns.reduce((sum, t) => {
-    const n = Number(t.amount);
-    return Number.isFinite(n) ? sum + n : sum;
-  }, 0);
-
-  // Actual detected payday loan debits (if any flagged by rules/regex)
-  const paydayTxns = useMemo(() => {
-    const tx = metrics?.ui?.payday_transactions ||
-               metrics?.summary?.payday_loans?.transactions ||
-               metrics?.payday_transactions || [];
-    return Array.isArray(tx) ? tx : [];
-  }, [metrics]);
-  const paydayTotal = paydayTxns.reduce((sum, t) => {
-    const n = Number(t.amount);
-    return Number.isFinite(n) ? sum + n : sum;
-  }, 0);
-
+  const isSuperAdmin = String(admin?.role_code || admin?.role || '').toLowerCase() === 'super_admin';
   const handleRerunBre = useCallback(async () => {
     if (!handleResumeCreditDecision) return;
     setRerunning(true);
@@ -335,48 +288,6 @@ export default function AaReportTab({ onOpenCreditCheck }) {
     }
   };
 
-  const handleDownloadSalaryHistory = async () => {
-    if (!salaryTxns.length) return;
-    setExportingSalary(true);
-    try {
-      const fileName = await downloadSalaryHistoryExcel({
-        transactions: salaryTxns,
-        meta: {
-          leadId: loanApp?.lead_id || applicationRef,
-          applicationRef,
-          customerName,
-          customerCode: userData?.customer_code || userData?.profile?.customer_code,
-        },
-      });
-      setMessage?.(`Downloaded ${fileName}`);
-    } catch (err) {
-      setError(err?.message || 'Failed to export salary history');
-    } finally {
-      setExportingSalary(false);
-    }
-  };
-
-  const handleDownloadPaydayHistory = async () => {
-    if (!paydayTxns.length) return;
-    setExportingPayday(true);
-    try {
-      const fileName = await downloadPaydayHistoryExcel({
-        transactions: paydayTxns,
-        meta: {
-          leadId: loanApp?.lead_id || applicationRef,
-          applicationRef,
-          customerName,
-          customerCode: userData?.customer_code || userData?.profile?.customer_code,
-        },
-      });
-      setMessage?.(`Downloaded ${fileName}`);
-    } catch (err) {
-      setError(err?.message || 'Failed to export payday history');
-    } finally {
-      setExportingPayday(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="py-16 flex flex-col items-center justify-center bg-white rounded-lg border border-slate-200">
@@ -400,7 +311,7 @@ export default function AaReportTab({ onOpenCreditCheck }) {
               AA / Bank Data
             </h3>
             <p className="text-[10px] text-slate-500 mt-1">
-              Digitap Account Aggregator consent status and bank report (redacted).
+              Digitap Account Aggregator consent status and bank report.
             </p>
           </div>
         </div>
@@ -542,20 +453,22 @@ export default function AaReportTab({ onOpenCreditCheck }) {
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 text-xs bg-white"
-                  disabled={checkingStatus}
-                  onClick={handleCheckStatusNow}
-                >
-                  {checkingStatus ? (
-                    <Spinner className="w-3.5 h-3.5 mr-1.5" />
-                  ) : (
-                    <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-                  )}
-                  Check status now
-                </Button>
+                {isSuperAdmin && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs bg-white"
+                    disabled={checkingStatus}
+                    onClick={handleCheckStatusNow}
+                  >
+                    {checkingStatus ? (
+                      <Spinner className="w-3.5 h-3.5 mr-1.5" />
+                    ) : (
+                      <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                    )}
+                    Check status now
+                  </Button>
+                )}
                 {canGenerateAaLink && (
                   <Button
                     size="sm"
@@ -581,6 +494,7 @@ export default function AaReportTab({ onOpenCreditCheck }) {
               </p>
             )}
 
+            {isSuperAdmin && (
             <details className="group rounded-md border border-black/5 bg-white/70 text-[11px] text-slate-700">
               <summary className="cursor-pointer select-none px-3 py-1.5 font-medium text-slate-600">
                 Technical details
@@ -620,6 +534,7 @@ export default function AaReportTab({ onOpenCreditCheck }) {
                 )}
               </div>
             </details>
+            )}
           </div>
           {showCustomerBankLink && (
             <div className="rounded-lg border-2 border-slate-300 bg-slate-50 overflow-hidden">
@@ -712,22 +627,11 @@ export default function AaReportTab({ onOpenCreditCheck }) {
           )}
 
           {(bankReport?.available || metrics) && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
                 { label: 'Avg balance', value: inr(metrics?.avg_balance ?? metrics?.avg_monthly_balance) },
                 { label: 'Bounces', value: metrics?.bounce_count ?? '—' },
                 { label: 'Neg. balance days', value: metrics?.negative_balance_days ?? '—' },
-                {
-                  label: 'Salary consistency',
-                  value:
-                    metrics?.salary_credit_consistency_pct != null
-                      ? `${metrics.salary_credit_consistency_pct}%`
-                      : '—',
-                },
-                {
-                  label: 'Est. monthly income',
-                  value: inr(metrics?.estimated_monthly_income),
-                },
                 {
                   label: 'Report fetched',
                   value: bankReport?.reportFetchedAt
@@ -791,7 +695,6 @@ export default function AaReportTab({ onOpenCreditCheck }) {
                       <th className="px-3 py-2 font-medium">Month</th>
                       <th className="px-3 py-2 font-medium text-right">Credits</th>
                       <th className="px-3 py-2 font-medium text-right">Debits</th>
-                      <th className="px-3 py-2 font-medium text-right">Salary</th>
                       <th className="px-3 py-2 font-medium text-right">Avg bal</th>
                       <th className="px-3 py-2 font-medium text-right">Net</th>
                     </tr>
@@ -806,9 +709,6 @@ export default function AaReportTab({ onOpenCreditCheck }) {
                         <td className="px-3 py-2 text-right tabular-nums text-rose-700">
                           {inr(m.total_debits)}
                         </td>
-                        <td className="px-3 py-2 text-right tabular-nums text-sky-800">
-                          {salaryByMonth[m.month] != null ? inr(salaryByMonth[m.month]) : '—'}
-                        </td>
                         <td className="px-3 py-2 text-right tabular-nums">{inr(m.avg_balance)}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{inr(m.net_cash_flow)}</td>
                       </tr>
@@ -818,135 +718,6 @@ export default function AaReportTab({ onOpenCreditCheck }) {
               </div>
             </div>
           )}
-
-          {salaryTxns.length > 0 && (
-            <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
-              <div className="px-3 py-2 border-b border-slate-100 bg-slate-50 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <h4 className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
-                    Salary Credits History ({salaryTxns.length})
-                  </h4>
-                  <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-medium border border-emerald-200">
-                    Salary Inflows
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="text-[11px] font-semibold text-emerald-700 tabular-nums">
-                    Total Salary {inr(salaryTotal)}
-                  </span>
-                  {salarySummary?.average_amount != null && (
-                    <span className="text-[11px] text-slate-600 tabular-nums">
-                      Avg Monthly {inr(salarySummary.average_amount)}
-                    </span>
-                  )}
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-[11px]"
-                    disabled={!salaryTxns.length || exportingSalary}
-                    onClick={handleDownloadSalaryHistory}
-                  >
-                    {exportingSalary ? (
-                      <Spinner className="mr-1.5 h-3.5 w-3.5" />
-                    ) : (
-                      <Download className="mr-1.5 h-3.5 w-3.5" />
-                    )}
-                    Download Salary Excel
-                  </Button>
-                </div>
-              </div>
-              <div className="overflow-x-auto max-h-64">
-                <table className="w-full text-xs">
-                  <thead className="sticky top-0 bg-white z-10">
-                    <tr className="text-left text-slate-500 border-b border-slate-100">
-                      <th className="px-3 py-2 font-medium">Date</th>
-                      <th className="px-3 py-2 font-medium">Employer / Narration</th>
-                      <th className="px-3 py-2 font-medium text-right">Credit Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {salaryTxns.map((t, i) => (
-                      <tr key={`${t.date}-${t.amount}-${i}`} className="border-b border-slate-50">
-                        <td className="px-3 py-1.5 whitespace-nowrap">{t.date || '—'}</td>
-                        <td className="px-3 py-1.5 text-slate-600 max-w-md truncate">
-                          {t.narration || '—'}
-                        </td>
-                        <td className="px-3 py-1.5 text-right tabular-nums text-emerald-700 font-semibold">
-                          {inr(t.amount)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {paydayTxns.length > 0 ? (
-            <div className="rounded-lg border border-rose-300 bg-rose-50/40 overflow-hidden">
-              <div className="px-3 py-2 border-b border-rose-200 bg-rose-100/60 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-rose-600" />
-                  <h4 className="text-[11px] font-bold uppercase tracking-wide text-rose-800">
-                    Detected Payday / Short-Term Loan Debits ({paydayTxns.length})
-                  </h4>
-                  <span className="text-[10px] bg-rose-200 text-rose-800 px-2 py-0.5 rounded font-bold border border-rose-300">
-                    Risk Warning
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="text-[11px] font-bold text-rose-700 tabular-nums">
-                    Total Payday Debits {inr(paydayTotal)}
-                  </span>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-[11px] border-rose-300 text-rose-800 hover:bg-rose-100"
-                    disabled={exportingPayday}
-                    onClick={handleDownloadPaydayHistory}
-                  >
-                    {exportingPayday ? (
-                      <Spinner className="mr-1.5 h-3.5 w-3.5" />
-                    ) : (
-                      <Download className="mr-1.5 h-3.5 w-3.5" />
-                    )}
-                    Download Payday Excel
-                  </Button>
-                </div>
-              </div>
-              <div className="overflow-x-auto max-h-64">
-                <table className="w-full text-xs">
-                  <thead className="sticky top-0 bg-rose-50 z-10">
-                    <tr className="text-left text-rose-700 border-b border-rose-200">
-                      <th className="px-3 py-2 font-medium">Date</th>
-                      <th className="px-3 py-2 font-medium">Lender / Narration</th>
-                      <th className="px-3 py-2 font-medium text-right">Debit Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paydayTxns.map((t, i) => (
-                      <tr key={`payday-${t.date}-${t.amount}-${i}`} className="border-b border-rose-100/60">
-                        <td className="px-3 py-1.5 whitespace-nowrap text-rose-900">{t.date || '—'}</td>
-                        <td className="px-3 py-1.5 text-rose-800 max-w-md truncate">{t.narration || '—'}</td>
-                        <td className="px-3 py-1.5 text-right tabular-nums text-rose-700 font-semibold">
-                          {inr(t.amount)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : mappingReady ? (
-            <div className="rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 flex items-center justify-between text-xs text-slate-600">
-              <span className="font-medium text-slate-700">Running Payday / Instant Loans:</span>
-              <span className="text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                None Detected (0)
-              </span>
-            </div>
-          ) : null}
 
           {mappingReady && (
             <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
@@ -1007,16 +778,6 @@ export default function AaReportTab({ onOpenCreditCheck }) {
             </div>
           )}
 
-          {bankReport?.redacted && (
-            <details className="rounded-lg border border-slate-200 bg-white p-3">
-              <summary className="text-[11px] font-medium text-slate-600 cursor-pointer">
-                Redacted Bank Data JSON
-              </summary>
-              <pre className="mt-2 text-[10px] bg-slate-50 border border-slate-100 rounded-md p-3 max-h-80 overflow-auto whitespace-pre-wrap break-all">
-                {JSON.stringify(bankReport.redacted, null, 2)}
-              </pre>
-            </details>
-          )}
 
           {!bankReport?.available && aaDisplay.key === 'processing' && (
             <p className="text-xs text-slate-500">
