@@ -285,13 +285,6 @@ export default function AdminLayout() {
     [admin?.role, admin?.role_code]
   );
 
-  useEffect(() => {
-    if (adminRoleKey !== 'org_admin') return;
-    const path = location.pathname;
-    const allowed = path.startsWith('/admin/staff-users') || path.startsWith('/admin/roles');
-    if (!allowed) navigate('/admin/staff-users', { replace: true });
-  }, [adminRoleKey, location.pathname, navigate]);
-
   const filteredGroups = useMemo(
     () =>
       filterNavGroups(menuGroups, adminRoleKey, {

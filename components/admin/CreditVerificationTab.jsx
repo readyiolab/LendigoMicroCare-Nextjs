@@ -35,6 +35,7 @@ const CreditVerificationTab = () => {
     const role = String(admin?.role_code || admin?.role || '').toLowerCase();
     const canVerifyRole = [
         'super_admin',
+        'org_admin',
         'admin',
         'operations',
         'operations_manager',

@@ -4,9 +4,10 @@ const normalizeRole = (role) =>
     .toLowerCase()
     .replace(/\s+/g, '_');
 
-export const SETTLEMENT_CHECKER_ROLES = ['super_admin', 'operations_manager'];
+export const SETTLEMENT_CHECKER_ROLES = ['super_admin', 'org_admin', 'operations_manager'];
 export const SETTLEMENT_MAKER_ROLES = [
   'super_admin',
+  'org_admin',
   'operations_manager',
   'collection_manager',
   'operations',

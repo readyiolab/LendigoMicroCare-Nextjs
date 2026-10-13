@@ -13,7 +13,7 @@ import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { cn } from '@/lib/utils';
 
-export const APPROVER_ROLES = new Set(['super_admin', 'operations_manager']);
+export const APPROVER_ROLES = new Set(['super_admin', 'org_admin', 'operations_manager']);
 export const PAYMENT_APPROVALS_REFRESH_EVENT = 'payment-approvals:refresh';
 const SOCKET_EVENT = 'PAYMENT_APPROVALS_CHANGED';
 const POLL_MS = 60 * 1000;

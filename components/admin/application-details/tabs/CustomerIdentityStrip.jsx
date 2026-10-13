@@ -199,7 +199,7 @@ export default function CustomerIdentityStrip() {
           <p className="text-[11px] font-medium text-slate-500">Next salary date</p>
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-[13px] font-semibold text-slate-900">{formatDate(profile.next_salary_date)}</span>
-            {admin?.role === 'super_admin' && (
+            {['super_admin', 'org_admin'].includes(String(admin?.role_code || admin?.role || '').toLowerCase()) && (
               editingSalaryDate ? (
                 <div className="flex items-center gap-1.5">
                   <Input

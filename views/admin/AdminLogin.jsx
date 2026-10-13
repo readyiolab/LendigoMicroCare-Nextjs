@@ -65,8 +65,6 @@ export default function AdminLogin() {
           (role === 'dsa' || ['sales_manager', 'branch_manager'].includes(role))
         ) {
           navigate('/admin/dsa');
-        } else if (role === 'org_admin') {
-          navigate('/admin/staff-users');
         } else if (role === 'collection_executive') {
           navigate('/admin/collection?tab=today');
         } else if (role === 'collection_manager') {

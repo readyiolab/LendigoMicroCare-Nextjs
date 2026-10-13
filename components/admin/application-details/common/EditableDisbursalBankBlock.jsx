@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { DetailRow, btnPrimary, btnSecondary } from './DetailTable';
 import useIfscLookup from './useIfscLookup';
 
-const BANK_EDIT_ROLES = ['admin', 'super_admin', 'operations', 'operations_manager', 'credit_manager', 'underwriter'];
+const BANK_EDIT_ROLES = ['admin', 'super_admin', 'org_admin', 'operations', 'operations_manager', 'credit_manager', 'underwriter'];
 const TERMINAL_STATUSES = ['rejected', 'offer_rejected', 'closed'];
 const IFSC_RE = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 

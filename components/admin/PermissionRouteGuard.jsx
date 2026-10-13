@@ -24,14 +24,10 @@ export function PermissionRouteGuard({ permissionCode, action = 'can_view', chil
   const roleKey = normalizeRole(admin?.role_code || admin?.role);
   const isSuperAdmin = roleKey === 'super_admin';
   const isOrgAdmin = roleKey === 'org_admin';
-  const mapReady = !!(admin?.permissionMap && Object.keys(admin.permissionMap).length);
-  const orgAdminViewOnly = action === 'can_view' && (permissionCode === 'admin.users' || permissionCode === 'admin.roles');
-  const orgAdminAllowed = mapReady
-    ? hasPermission(admin.permissionMap, permissionCode, action)
-    : orgAdminViewOnly;
+  const roleWriteDenied = isOrgAdmin && action !== 'can_view' && (permissionCode === 'admin.roles' || permissionCode === 'admin.users');
 
   const allowed = isSuperAdmin
-    || (isOrgAdmin && orgAdminAllowed)
+    || (isOrgAdmin && !roleWriteDenied)
     || (!isOrgAdmin && !admin?.has_custom_permissions)
     || (!isOrgAdmin && hasPermission(admin?.permissionMap, permissionCode, action));
 
@@ -43,7 +39,7 @@ export function PermissionRouteGuard({ permissionCode, action = 'can_view', chil
   }, [allowed, admin?.has_custom_permissions, isOrgAdmin, permissionCode, toast]);
 
   if (!allowed) {
-    return <Navigate to={isOrgAdmin ? '/admin/staff-users' : '/admin/dashboard'} replace />;
+    return <Navigate to="/admin/dashboard" replace />;
   }
 
   return children;

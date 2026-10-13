@@ -20,6 +20,7 @@ import { getApiErrorMessage } from '@/lib/apiErrorMessage';
 import { uploadToS3 } from '@/lib/services/cloudinaryUpload';
 import { cn } from '@/lib/utils';
 import { getWorkflowCard, sortRolesForStaffPicker } from '@/config/workflowRolePresets';
+import { useAdminAuth } from '@/contexts/AdminAuthContext';
 
 const EMPTY_FORM = {
   full_name: '',
@@ -76,6 +77,9 @@ export default function StaffUserFormPage() {
   const { id } = useParams();
   const isEdit = Boolean(id);
 
+  const { admin: actor } = useAdminAuth();
+  const actorIsOrgAdmin = String(actor?.role_code || actor?.role || '').toLowerCase() === 'org_admin';
+
   const [form, setForm] = useState(EMPTY_FORM);
   const [branches, setBranches] = useState([]);
   const [roles, setRoles] = useState([]);
@@ -89,7 +93,10 @@ export default function StaffUserFormPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const sortedRoles = useMemo(() => sortRolesForStaffPicker(roles), [roles]);
+  const sortedRoles = useMemo(
+    () => sortRolesForStaffPicker(roles).filter((role) => !(actorIsOrgAdmin && role.role_code === 'super_admin')),
+    [roles, actorIsOrgAdmin]
+  );
 
   const selectedRole = useMemo(
     () => roles.find((r) => String(r.id) === String(form.role_id)) || null,
@@ -135,6 +142,9 @@ export default function StaffUserFormPage() {
           avatar_url: u.avatar_url || '',
         });
         setAvatarPreview(u.avatar_url || '');
+        if (actorIsOrgAdmin && String(u.role_code || u.role || '').toLowerCase() === 'super_admin') {
+          setError('Admin cannot change a Super Admin account');
+        }
         const hasCustom = !!u.has_custom_permissions;
         setCustomizePermissions(hasCustom);
         setShowAdvanced(hasCustom);
@@ -147,7 +157,7 @@ export default function StaffUserFormPage() {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, actorIsOrgAdmin]);
 
   useEffect(() => { loadMeta(); }, [loadMeta]);
   useEffect(() => { loadUser(); }, [loadUser]);
@@ -190,6 +200,10 @@ export default function StaffUserFormPage() {
     setError('');
     if (!form.full_name || !form.email || (!isEdit && !form.password) || !form.role_id || !form.branch_id) {
       setError('Please fill all required fields (name, email, branch, role' + (isEdit ? ').' : ', password).'));
+      return;
+    }
+    if (actorIsOrgAdmin && (selectedRole?.role_code === 'super_admin')) {
+      setError('Admin cannot change a Super Admin account');
       return;
     }
     if (selectedRole?.role_code === 'collection_executive' && !form.parent_admin_id) {

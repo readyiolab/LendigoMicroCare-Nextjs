@@ -106,10 +106,17 @@ export const WORKFLOW_ROLE_CARDS = {
     stage: 'system',
     primary_flow: false,
     selectable: true,
-    summary: 'View staff users and role management. Cannot create, edit, or delete them.',
-    receives: null,
-    can_do: ['View staff users', 'View role management'],
-    cannot_do: ['Create, edit, or delete staff or roles', 'Open loans, collections, or other modules'],
+    summary: 'Works like Super Admin. Staff users and role management are view-only.',
+    receives: 'All applications and admin settings',
+    can_do: [
+      'Open every screen Super Admin can open',
+      'Act at any loan stage',
+    ],
+    cannot_do: [
+      'Create, edit, or delete staff users',
+      'Create, edit, or delete roles',
+      'Change status types',
+    ],
     next_handoff: null,
   },
   super_admin: {

@@ -216,11 +216,13 @@ export default function StaffUserListPage() {
                     No users found.
                   </TableCell>
                 </TableRow>
-              ) : users.map((user) => (
+              ) : users.map((user) => {
+                const canEditRow = canMutate;
+                return (
                 <TableRow
                   key={user.id}
-                  className={cn(adminUi.tableRowHover, canMutate && 'cursor-pointer')}
-                  onClick={() => canMutate && navigate(`/admin/staff-users/${user.id}/edit`)}
+                  className={cn(adminUi.tableRowHover, canEditRow && 'cursor-pointer')}
+                  onClick={() => canEditRow && navigate(`/admin/staff-users/${user.id}/edit`)}
                 >
                   <TableCell><UserAvatar user={user} /></TableCell>
                   <TableCell className="text-xs text-slate-600">{user.id}</TableCell>
@@ -243,7 +245,7 @@ export default function StaffUserListPage() {
                   <TableCell className="text-[11px] text-slate-500 whitespace-nowrap">{formatCreatedAt(user.created_at)}</TableCell>
                   <TableCell className="text-[11px] text-slate-500 whitespace-nowrap">{formatUpdatedAt(user.updated_at)}</TableCell>
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                    {canMutate ? (
+                    {canEditRow ? (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -257,7 +259,8 @@ export default function StaffUserListPage() {
                     )}
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
           </div>

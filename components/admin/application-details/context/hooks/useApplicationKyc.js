@@ -285,7 +285,7 @@ export function useApplicationKyc({
     /** Ops or Credit Manager may run post-offer Digitap e-sign / e-mandate. */
     const canRunPostOfferDigio = useCallback(() => {
         const role = String(admin?.role_code || admin?.role || '').toLowerCase();
-        return ['operations', 'operations_manager', 'credit_manager', 'underwriter', 'super_admin', 'admin'].includes(role);
+        return ['operations', 'operations_manager', 'credit_manager', 'underwriter', 'super_admin', 'org_admin', 'admin'].includes(role);
     }, [admin]);
     const isOpsStaff = canRunPostOfferDigio;
 

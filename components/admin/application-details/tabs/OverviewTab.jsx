@@ -71,6 +71,7 @@ export default function OverviewTab() {
     'operations',
     'operations_manager',
     'super_admin',
+    'org_admin',
     'admin',
     'telecaller',
   ].includes(String(staffRole || '').toLowerCase());
@@ -138,6 +139,7 @@ export default function OverviewTab() {
     'operations_manager',
     'credit_manager',
     'super_admin',
+    'org_admin',
     'admin',
     'underwriter',
     'approver',

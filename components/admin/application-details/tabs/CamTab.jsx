@@ -494,7 +494,7 @@ export default function CamTab() {
   const inputsSigRef = useRef('');
   const role = String(admin?.role || admin?.role_code || '').toLowerCase();
 
-  const isOverrideAdmin = role === 'super_admin' || role === 'admin';
+  const isOverrideAdmin = role === 'super_admin' || role === 'org_admin' || role === 'admin';
   const canEditCamRole = ['credit_manager', 'underwriter', 'approver'].includes(role) || isOverrideAdmin;
   const canReturnRole = role === 'underwriter' || role === 'approver' || isOverrideAdmin;
   const canApproveRole = role === 'underwriter' || role === 'approver' || isOverrideAdmin;

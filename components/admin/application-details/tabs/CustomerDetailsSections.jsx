@@ -84,10 +84,10 @@ export default function CustomerDetailsSections() {
   } = useApplicationContext();
 
   const role = String(admin?.role_code || admin?.role || '').toLowerCase();
-  const canVerifyRefs = ['credit_manager', 'underwriter', 'approver', 'super_admin', 'admin'].includes(role);
+  const canVerifyRefs = ['credit_manager', 'underwriter', 'approver', 'super_admin', 'org_admin', 'admin'].includes(role);
   const status = String(loanApp?.application_status || '').toLowerCase();
   const caseFinished = ['disbursed', 'closed', 'defaulted', 'rejected', 'offer_rejected'].includes(status);
-  const isOverride = role === 'super_admin' || role === 'admin';
+  const isOverride = role === 'super_admin' || role === 'org_admin' || role === 'admin';
   const canEditRefs = isOverride
     ? !caseFinished
     : canVerifyRefs && !isReadOnly;

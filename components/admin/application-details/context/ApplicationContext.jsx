@@ -571,7 +571,7 @@ export const ApplicationProvider = ({
             return;
         }
         const gateRequiredStatuses = ['recommended', 'approved', 'offer_sent'];
-        if (gateRequiredStatuses.includes(nextStatus) && admin?.role !== 'super_admin') {
+        if (gateRequiredStatuses.includes(nextStatus) && !['super_admin', 'org_admin'].includes(String(admin?.role_code || admin?.role || '').toLowerCase())) {
             const alreadySanctioned = ['approved', 'offer_sent'].includes(
                 String(loanApp?.application_status || '').toLowerCase()
             );

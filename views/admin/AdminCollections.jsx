@@ -96,7 +96,7 @@ export default function AdminCollections() {
   const roleKey = collectionRoleKey(admin);
   const isExecutive = roleKey === 'collection_executive';
   const isManager = roleKey === 'collection_manager';
-  const canAllocate = roleKey === 'super_admin' || isManager;
+  const canAllocate = roleKey === 'super_admin' || roleKey === 'org_admin' || isManager;
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = VALID_TABS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'dashboard';
   const [activeTab, setActiveTab] = useState(initialTab);

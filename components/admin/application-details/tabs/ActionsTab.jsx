@@ -424,7 +424,7 @@ export default function ActionsTab() {
             return;
         }
         if (
-            admin?.role === 'super_admin' &&
+            ['super_admin', 'org_admin'].includes(String(admin?.role_code || admin?.role || '').toLowerCase()) &&
             gatesBlockSave
         ) {
             setShowOverrideDialog(true);
@@ -556,7 +556,7 @@ export default function ActionsTab() {
                         })}
                     </div>
 
-                    {needsGatesForStatus && pendingGates.length > 0 && !skipGatesForSanctionedOffer && admin?.role !== 'super_admin' && (
+                    {needsGatesForStatus && pendingGates.length > 0 && !skipGatesForSanctionedOffer && !['super_admin', 'org_admin'].includes(String(admin?.role_code || admin?.role || '').toLowerCase()) && (
                         <div className="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-100 text-[10px] text-amber-900 leading-relaxed">
                             <p className="font-semibold uppercase tracking-wide text-[9px] mb-1">Before you can save this decision</p>
                             <p>Complete {pendingGates.length} pending step{pendingGates.length > 1 ? 's' : ''}: {pendingGates.map((g) => g.label).join(', ')}.</p>
@@ -1116,17 +1116,17 @@ export default function ActionsTab() {
                                 </Alert>
                             )}
 
-                            <Button id="decision-submit" type="submit" className="w-full h-10 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs transition-shadow" disabled={updating || !statusUpdate.status || (gatesBlockSave && admin?.role !== 'super_admin')}>
+                            <Button id="decision-submit" type="submit" className="w-full h-10 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs transition-shadow" disabled={updating || !statusUpdate.status || (gatesBlockSave && !['super_admin', 'org_admin'].includes(String(admin?.role_code || admin?.role || '').toLowerCase()))}>
                                 {updating ? (
                                     <RefreshCw className="w-4 h-4 animate-spin" />
-                                ) : admin?.role === 'super_admin' ? (
+                                ) : ['super_admin', 'org_admin'].includes(String(admin?.role_code || admin?.role || '').toLowerCase()) ? (
                                     <ShieldCheck className="w-4 h-4 mr-2 text-amber-400" />
                                 ) : isSendOffer ? (
                                     <Mail className="w-4 h-4 mr-2" />
                                 ) : (
                                     <Save className="w-4 h-4 mr-2" />
                                 )}
-                                {admin?.role === 'super_admin'
+                                {['super_admin', 'org_admin'].includes(String(admin?.role_code || admin?.role || '').toLowerCase())
                                     ? 'DIRECT OVERRIDE & SAVE'
                                     : isSendOffer
                                       ? 'SEND OFFER TO CUSTOMER'

@@ -38,7 +38,7 @@ export default function AdminDashboard() {
   }, []);
 
   const canViewAnalytics = useMemo(
-    () => ['super_admin', 'operations_manager'].includes(admin?.role),
+    () => ['super_admin', 'org_admin', 'operations_manager'].includes(String(admin?.role_code || admin?.role || '').toLowerCase()),
     [admin]
   );
 

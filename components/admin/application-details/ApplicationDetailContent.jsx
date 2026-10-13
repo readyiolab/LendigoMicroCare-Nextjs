@@ -230,7 +230,7 @@ export default function ApplicationDetailContent() {
     });
     const canShowCollection =
         String(loanApp?.application_status || '').toLowerCase() === 'disbursed';
-    const isHeaderUwRole = ['underwriter', 'super_admin', 'admin'].includes(String(staffRole || '').toLowerCase());
+    const isHeaderUwRole = ['underwriter', 'super_admin', 'org_admin', 'admin'].includes(String(staffRole || '').toLowerCase());
     const appStatusLc = String(loanApp?.application_status || '').toLowerCase();
     const canHeaderApprove =
         isHeaderUwRole && appStatusLc === 'recommended' && !isRepaymentReview && !justApproved;

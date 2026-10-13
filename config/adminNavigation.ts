@@ -199,7 +199,7 @@ function permissionMapIsSet(permissionMap?: PermissionMap | null) {
  */
 export function canOpenLoanBookMis(roleKey: unknown, permissionMap?: PermissionMap | null) {
   const key = normalizeAdminRole(roleKey)
-  if (key === "super_admin") return true
+  if (key === "super_admin" || key === "org_admin") return true
   if (permissionMapIsSet(permissionMap)) {
     return hasPermission(permissionMap, "admin.reports", "can_view")
   }
@@ -213,7 +213,7 @@ function canSeeNavItemWithPermissions(
   hasCustomPermissions = false
 ) {
   if (!item?.roles?.length) return false
-  if (roleKey === "super_admin") return canSeeNavItem(item, roleKey)
+  if (roleKey === "super_admin" || roleKey === "org_admin") return canSeeNavItem(item, "super_admin")
 
   const permissionCode = getNavItemPermissionCode(item.id)
   if (permissionCode && (permissionMapIsSet(permissionMap) || hasCustomPermissions)) {
@@ -282,15 +282,6 @@ export function filterNavGroups(
 ): AdminNavGroup[] {
   const { creditBuckets, permissionMap, hasCustomPermissions } = options
   const source = DSA_PARTNER_UI_ENABLED ? groups : groups.filter((g) => g.id !== "dsa")
-
-  if (roleKey === "org_admin") {
-    return source
-      .map((group) => ({
-        ...group,
-        children: (group.children || []).filter((child) => child.id === "staff-users" || child.id === "roles"),
-      }))
-      .filter((group) => group.children.length > 0)
-  }
 
   if (DSA_PARTNER_UI_ENABLED && roleKey === "dsa") {
     const dsaGroup = source.find((g) => g.id === "dsa")

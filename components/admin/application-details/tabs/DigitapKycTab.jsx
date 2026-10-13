@@ -363,7 +363,7 @@ export default function DigitapKycTab() {
     })();
     const adminRole = String(admin?.role_code || admin?.role || '').toLowerCase();
     /** Credit Manager and Operations can run post-offer e-sign + e-mandate. */
-    const canRunPostOfferDigio = ['operations', 'operations_manager', 'credit_manager', 'underwriter', 'super_admin', 'admin'].includes(adminRole);
+    const canRunPostOfferDigio = ['operations', 'operations_manager', 'credit_manager', 'underwriter', 'super_admin', 'org_admin', 'admin'].includes(adminRole);
     const isOpsStaff = canRunPostOfferDigio;
     const employmentStatus =
         String(data?.employment?.uan_status || loanApp?.uan_status || '').toLowerCase() === 'success'
