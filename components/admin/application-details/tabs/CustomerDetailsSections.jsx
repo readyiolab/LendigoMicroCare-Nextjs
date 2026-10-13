@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   User as UserIcon,
-  CheckCircle2,
   BadgeCheck,
   Play,
   Volume2,
@@ -36,8 +35,6 @@ import {
   normalizeRecordingFile,
 } from '@/lib/utils/callRecording';
 import { formatKycAddress } from '@/lib/utils/formatKycAddress';
-import { pickSelfieDisplayUrl } from '@/lib/utils/media';
-import { getOptimizedUrl } from '@/lib/services/cloudinaryUpload';
 
 const formatDate = (value, options = { day: 'numeric', month: 'short', year: 'numeric' }) => {
   if (!value) return EMPTY;
@@ -64,16 +61,10 @@ export default function CustomerDetailsSections() {
   const {
     userData,
     loanApp,
-    selfie,
     references,
     admin,
     data,
     kyc_details,
-    editingSalaryDate,
-    setEditingSalaryDate,
-    newSalaryDate,
-    setNewSalaryDate,
-    handleUpdateSalaryDate,
     updating,
     sendingOfficeOTP,
     verifyingOfficeOTP,
@@ -89,7 +80,6 @@ export default function CustomerDetailsSections() {
     handleDeleteApplicationReference,
     handleLookupReferenceMobileName,
     handleUpdateApplicantProfile,
-    handleUpdatePrimaryMobile,
     isReadOnly,
   } = useApplicationContext();
 
@@ -135,9 +125,6 @@ export default function CustomerDetailsSections() {
   const [editingOfficeAddress, setEditingOfficeAddress] = useState(false);
   const [altMobileDraft, setAltMobileDraft] = useState('');
   const [editingAltMobile, setEditingAltMobile] = useState(false);
-  const [primaryMobileDraft, setPrimaryMobileDraft] = useState('');
-  const [editingPrimaryMobile, setEditingPrimaryMobile] = useState(false);
-  const [primaryMobileError, setPrimaryMobileError] = useState('');
 
   useEffect(() => {
     if (!refRecordingFile) {
@@ -159,7 +146,6 @@ export default function CustomerDetailsSections() {
   const officeAddress = profile.office_address || null;
   const primaryMobile = userData?.mobile || profile.mobile || '';
   const alternateMobile = profile.alternate_mobile || '';
-  const selfieSrc = getOptimizedUrl(pickSelfieDisplayUrl({ selfie }), { width: 320 });
   const customerCode =
     profile.customer_code || userData?.customer_code || loanApp?.customer_code || data?.profile?.customer_code;
 
@@ -207,105 +193,9 @@ export default function CustomerDetailsSections() {
 
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+      <div className="space-y-2">
         <DetailTable title="Personal">
-          <DetailRow label="Photo" emphasize={false}>
-            {selfieSrc ? (
-              <button
-                type="button"
-                className="block rounded-lg overflow-hidden border border-slate-200 bg-white shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-                onClick={() => window.open(selfieSrc, '_blank', 'noopener,noreferrer')}
-                title="Open selfie"
-              >
-                <img src={selfieSrc} alt="Customer selfie" className="h-24 w-24 object-cover" />
-              </button>
-            ) : (
-              <span className="text-[12px] font-medium text-slate-400 italic">Not uploaded</span>
-            )}
-          </DetailRow>
-          <DetailRow label="Full name">{profile.full_name || userData?.full_name}</DetailRow>
           <DetailRow label="Customer ID" mono>{customerCode}</DetailRow>
-          <DetailRow label="Primary mobile" emphasize={false}>
-            {editingPrimaryMobile ? (
-              <div className="flex flex-col gap-1.5 min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Input
-                    value={primaryMobileDraft}
-                    onChange={(e) => {
-                      setPrimaryMobileDraft(e.target.value.replace(/\D/g, '').slice(0, 10));
-                      setPrimaryMobileError('');
-                    }}
-                    className="h-8 w-36 text-[12px] font-mono"
-                    placeholder="10-digit mobile"
-                    maxLength={10}
-                  />
-                  <Button
-                    size="sm"
-                    className={btnSuccess}
-                    disabled={updating || primaryMobileDraft.length !== 10}
-                    onClick={async () => {
-                      const localErr = validateProfileContactUniqueness({
-                        candidate: primaryMobileDraft,
-                        role: 'primary',
-                        primaryMobile,
-                        alternateMobile,
-                        references,
-                      });
-                      if (localErr) {
-                        setPrimaryMobileError(localErr);
-                        return;
-                      }
-                      const result = await handleUpdatePrimaryMobile(primaryMobileDraft);
-                      if (result?.ok) {
-                        setEditingPrimaryMobile(false);
-                        setPrimaryMobileError('');
-                      } else if (result?.message) {
-                        setPrimaryMobileError(result.message);
-                      }
-                    }}
-                  >
-                    Save
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-8 text-[11px]"
-                    onClick={() => {
-                      setEditingPrimaryMobile(false);
-                      setPrimaryMobileError('');
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-                {primaryMobileError ? (
-                  <p className="text-[11px] text-rose-600 font-medium">{primaryMobileError}</p>
-                ) : (
-                  <p className="text-[10px] text-slate-500">
-                    Login mobile used for DigiLocker / KYC. Must be a unique 10-digit Indian number.
-                  </p>
-                )}
-              </div>
-            ) : (
-              <span className="inline-flex items-center gap-2">
-                <span className="font-mono font-bold">{primaryMobile || EMPTY}</span>
-                {!isReadOnly && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    className={btnSecondary}
-                    onClick={() => {
-                      setPrimaryMobileDraft(primaryMobile || '');
-                      setPrimaryMobileError('');
-                      setEditingPrimaryMobile(true);
-                    }}
-                  >
-                    {primaryMobile ? 'Edit' : 'Add'}
-                  </Button>
-                )}
-              </span>
-            )}
-          </DetailRow>
           <DetailRow label="Alternate mobile" emphasize={false}>
             {editingAltMobile ? (
               <div className="flex flex-col gap-1.5 min-w-0">
@@ -384,24 +274,6 @@ export default function CustomerDetailsSections() {
                 )}
               </span>
             )}
-          </DetailRow>
-          <DetailRow label="Personal email" emphasize={false}>
-            <ValueWithBadge
-              value={profile.personal_email || userData?.email}
-              verified={profile.personal_email_verified || userData?.personal_email_verified}
-            />
-          </DetailRow>
-          <DetailRow label="Date of birth">{formatDate(profile.dob)}</DetailRow>
-          <DetailRow label="Gender">
-            {profile.gender
-              ? profile.gender.charAt(0).toUpperCase() + profile.gender.slice(1)
-              : null}
-          </DetailRow>
-          <DetailRow label="PAN" mono emphasize={false}>
-            <ValueWithBadge
-              value={profile.pancard || userData?.pancard}
-              verified={profile.pancard_verified}
-            />
           </DetailRow>
           <DetailRow label="Eligibility">
             {String(profile.eligibility_status || 'pending').replace(/_/g, ' ')}
@@ -529,52 +401,9 @@ export default function CustomerDetailsSections() {
             ) : null
           }
         >
-          <DetailRow label="Monthly income" mono>{formatCurrency(profile.net_monthly_income)}</DetailRow>
           <DetailRow label="Max loan eligibility" mono>{formatCurrency(profile.max_loan_amount)}</DetailRow>
           <DetailRow label="Max tenure">
             {profile.max_tenure_days ? `${profile.max_tenure_days} days` : null}
-          </DetailRow>
-          <DetailRow label="Next salary date" emphasize={false}>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-bold">{formatDate(profile.next_salary_date)}</span>
-              {admin?.role === 'super_admin' && (
-                editingSalaryDate ? (
-                  <div className="flex items-center gap-1.5">
-                    <Input
-                      type="date"
-                      className="h-8 text-[12px] font-semibold w-40 rounded-md border-slate-300 bg-white px-2"
-                      value={newSalaryDate}
-                      onChange={(e) => setNewSalaryDate(e.target.value)}
-                    />
-                    <Button
-                      size="sm"
-                      className={btnSuccess}
-                      onClick={handleUpdateSalaryDate}
-                      disabled={updating}
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                      Save
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    type="button"
-                    size="sm"
-                    className={btnSecondary}
-                    onClick={() => {
-                      setEditingSalaryDate(true);
-                      setNewSalaryDate(
-                        profile.next_salary_date
-                          ? new Date(profile.next_salary_date).toISOString().split('T')[0]
-                          : ''
-                      );
-                    }}
-                  >
-                    Edit
-                  </Button>
-                )
-              )}
-            </div>
           </DetailRow>
           <DetailRow label="User type">{profile.user_type || 'standard'}</DetailRow>
           <DetailRow label="Profile completion" mono>

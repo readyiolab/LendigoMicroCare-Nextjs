@@ -5,6 +5,7 @@ import {
 import { useApplicationContext } from '@/components/admin/application-details/context/ApplicationContext';
 import VideoVerificationSection from '../common/VideoVerificationSection';
 import CustomerDetailsSections from './CustomerDetailsSections';
+import CustomerIdentityStrip from './CustomerIdentityStrip';
 import EditableDisbursalBankBlock, { canEditLoanBank } from '../common/EditableDisbursalBankBlock';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -157,6 +158,8 @@ export default function OverviewTab() {
           </div>
         </div>
       )}
+
+      <CustomerIdentityStrip />
 
       {showSanctionLetterBtn && (
         <DetailTable title="Sanction letter">
