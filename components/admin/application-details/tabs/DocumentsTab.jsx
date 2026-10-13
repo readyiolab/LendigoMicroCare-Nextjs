@@ -1025,13 +1025,13 @@ export default function DocumentsTab() {
               Cancel
             </Button>
             <Button
-              disabled={uploadingKey === 'other' || !String(renameDialog.label || '').trim()}
+              disabled={uploadingKey === 'rename' || !String(renameDialog.label || '').trim()}
               onClick={async () => {
                 const ok = await handleRenameOtherDocument(renameDialog.id, renameDialog.label);
                 if (ok) setRenameDialog({ open: false, id: null, label: '' });
               }}
             >
-              {uploadingKey === 'other' ? 'Saving…' : 'Save name'}
+              {uploadingKey === 'rename' ? 'Saving…' : 'Save name'}
             </Button>
           </DialogFooter>
         </DialogContent>

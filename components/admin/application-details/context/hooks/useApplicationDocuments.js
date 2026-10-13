@@ -486,8 +486,17 @@ export function useApplicationDocuments({
       formData.append('documentLabel', documentLabel);
       const response = await adminAPI.uploadOtherDocument(applicationId, formData);
       if (response.status === 1) {
+        const row = response.data;
+        if (row?.id != null) {
+          setData((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              otherDocuments: [row, ...(prev.otherDocuments || [])],
+            };
+          });
+        }
         setMessage('Other document uploaded successfully');
-        await fetchDocumentsSection(true);
       } else {
         setError(response.message || 'Failed to upload document');
       }
@@ -517,7 +526,6 @@ export function useApplicationDocuments({
           };
         });
         setMessage('Document deleted');
-        await fetchDocumentsSection(true);
       } else {
         setError(response.message || 'Failed to delete document');
       }
@@ -532,8 +540,7 @@ export function useApplicationDocuments({
   const handleRenameOtherDocument = async (documentId, documentLabel) => {
     const label = String(documentLabel || '').trim();
     if (!documentId || !label) return false;
-    setUploadingKey('other');
-    setUploading(true);
+    setUploadingKey('rename');
     setError('');
     try {
       const response = await adminAPI.renameOtherDocument(applicationId, documentId, {
@@ -550,7 +557,6 @@ export function useApplicationDocuments({
           };
         });
         setMessage('Document renamed');
-        await fetchDocumentsSection(true);
         return true;
       }
       setError(response.message || 'Failed to rename document');
@@ -560,7 +566,6 @@ export function useApplicationDocuments({
       return false;
     } finally {
       setUploadingKey(null);
-      setUploading(false);
     }
   };
 
