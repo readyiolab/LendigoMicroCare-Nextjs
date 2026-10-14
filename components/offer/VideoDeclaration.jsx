@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 
 const MAX_RECORDING_TIME = 90;
+const MIN_RECORDING_BYTES = 20 * 1024;
+const VIDEO_BITS_PER_SECOND = 400000;
 const PLACEHOLDER = '____';
 const COMPANY_NAME = 'Lendigo Microcare ';
 
@@ -194,18 +196,16 @@ const VideoDeclaration = ({
 
     let mediaRecorder;
     try {
-      // 1.0 Mbps provides high visual quality for 480p/720p portrait declaration
-      // while guaranteeing that even a full 90-second video stays around ~10-12 MB.
       mediaRecorder = new MediaRecorder(streamRef.current, {
         ...(mimeType ? { mimeType } : {}),
-        videoBitsPerSecond: 1000000,
+        videoBitsPerSecond: VIDEO_BITS_PER_SECOND,
         audioBitsPerSecond: 64000,
       });
     } catch {
       try {
         mediaRecorder = new MediaRecorder(streamRef.current, {
           ...(mimeType ? { mimeType } : {}),
-          bitsPerSecond: 1000000,
+          bitsPerSecond: VIDEO_BITS_PER_SECOND,
         });
       } catch {
         mediaRecorder = mimeType
@@ -221,23 +221,34 @@ const VideoDeclaration = ({
     mediaRecorder.onstop = () => {
       const actualMime = mediaRecorder.mimeType || mimeType || 'video/webm';
       const blob = new Blob(chunksRef.current, { type: actualMime });
+      if (blob.size < MIN_RECORDING_BYTES) {
+        chunksRef.current = [];
+        setRecordedBlob(null);
+        setError('That recording did not save. Please record again.');
+        return;
+      }
+      setError('');
       setRecordedBlob(blob);
       stopCamera();
-      if (previewRef.current) {
-        previewRef.current.src = URL.createObjectURL(blob);
-      }
       setStep('review');
     };
 
     mediaRecorderRef.current = mediaRecorder;
-    mediaRecorder.start(100);
+    mediaRecorder.start();
     setIsRecording(true);
     setRecordingTime(0);
+    setError('');
   }, [stopCamera]);
 
   const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current?.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state === 'recording') {
+      try {
+        recorder.requestData();
+      } catch {
+        // Some browsers flush the last piece on stop() alone.
+      }
+      recorder.stop();
     }
     setIsRecording(false);
   }, []);
@@ -272,6 +283,18 @@ const VideoDeclaration = ({
     };
   }, [step, startCamera, stopCamera]);
 
+  useEffect(() => {
+    if (step !== 'review' || !recordedBlob) return undefined;
+    const node = previewRef.current;
+    if (!node) return undefined;
+    const url = URL.createObjectURL(recordedBlob);
+    node.src = url;
+    return () => {
+      URL.revokeObjectURL(url);
+      node.removeAttribute('src');
+    };
+  }, [step, recordedBlob]);
+
   const handleRetry = () => {
     setRecordedBlob(null);
     setRecordingTime(0);
@@ -283,7 +306,10 @@ const VideoDeclaration = ({
   };
 
   const handleSubmit = () => {
-    if (!recordedBlob || !onVideoReady) return;
+    if (!recordedBlob || recordedBlob.size < MIN_RECORDING_BYTES || !onVideoReady) {
+      setError('That recording did not save. Please record again.');
+      return;
+    }
     stopCamera();
     const recordedMime = recordedBlob.type || mediaRecorderRef.current?.mimeType || '';
     const isMp4 = recordedMime.toLowerCase().includes('mp4');

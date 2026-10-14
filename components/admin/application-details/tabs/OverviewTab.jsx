@@ -132,7 +132,9 @@ export default function OverviewTab() {
     bankDetails?.account_number_masked ||
     (bankDetails?.account_number ? `****${String(bankDetails.account_number).slice(-4)}` : null);
 
-  const videoUrl = data?.videoDeclaration?.video_url || loanApp.video_declaration_url;
+  const videoUrl = data?.videoDeclaration?.video_display_url
+    || data?.videoDeclaration?.video_url
+    || loanApp.video_declaration_url;
   const videoRole = String(staffRole || '').toLowerCase();
   const canVerifyVideoRole = [
     'operations',
@@ -146,7 +148,7 @@ export default function OverviewTab() {
   ].includes(videoRole);
   const canVerifyVideo =
     canVerifyVideoRole &&
-    ['video_declaration_submitted', 'offer_accepted'].includes(loanApp.application_status);
+    loanApp.application_status === 'video_declaration_submitted';
 
   return (
     <div>

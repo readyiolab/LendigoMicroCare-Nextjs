@@ -318,6 +318,16 @@ export default function AdminApplications() {
     if (isDetailView) refresh();
   }, [isDetailView, refresh]);
 
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible' || isDetailView) return;
+      clearSearchCache();
+      refresh();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [isDetailView, clearSearchCache, refresh]);
+
   // Deep links like ?search=CUS000123 / PAN / Lead / LAN open history or Account 360
   useEffect(() => {
     if (isLoanAccountQuery(urlSearch)) {

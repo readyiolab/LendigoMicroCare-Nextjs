@@ -162,7 +162,9 @@ export default function DocumentsTab() {
 
   const appNumber = loanApp?.application_number;
   const selfieUrl = selfie?.selfie_display_url || selfie?.display_url || selfie?.selfie_url || selfie?.url;
-  const videoUrl = data?.videoDeclaration?.video_url || loanApp?.video_declaration_url;
+  const videoUrl = data?.videoDeclaration?.video_display_url
+    || data?.videoDeclaration?.video_url
+    || loanApp?.video_declaration_url;
   const canUploadVideo = !isReadOnly;
   const pan = data?.profile?.pancard;
   const salarySlips = data?.salarySlips || [];

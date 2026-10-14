@@ -161,13 +161,14 @@ const OfferCard = ({ offer, applicationMeta, onAccepted, onRejected, onRevisionR
 
     setLoading(true);
     setError('');
-    setUploadProgress('Uploading your video…');
+    setUploadProgress('Uploading your video… 0%');
 
     try {
       const uploadResult = await uploadToCloudinary(videoFile, {
         folder: UPLOAD_FOLDERS.videoDeclaration,
         resourceType: 'video',
         compress: false,
+        onProgress: (percent) => setUploadProgress(`Uploading your video… ${percent}%`),
       });
 
       setUploadProgress('Saving your acceptance…');
