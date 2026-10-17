@@ -56,7 +56,7 @@ Do not run `npm update` or widen these ranges without re-checking parity.
 Each `VITE_*` variable became `NEXT_PUBLIC_*` with the same meaning; see `.env.example`. All of them are inlined into the browser bundle at build time, and no server-only secret is used by the frontend.
 
 - **Committed values.** `.env.production` is committed with the values the live React build actually resolves to. Vite lets `frontend/.env.production` override `frontend/.env`, which means uploads go directly to S3 (`UPLOAD_VIA_BACKEND=false`) and SMS OTP is off.
-- **Encryption key.** It is not committed. The deploy workflow takes it from the repository secret `NEXT_PUBLIC_PAYLOAD_ENCRYPTION_KEY` and fails the build if the secret is missing. The value must match the backend's `PAYLOAD_ENCRYPTION_KEY`, which is the same as `VITE_PAYLOAD_ENCRYPTION_KEY` in the server's `frontend/.env`.
+- **Encryption key.** Not used for this deploy. `NEXT_PUBLIC_PAYLOAD_ENCRYPTION_KEY` is left empty, and the workflow does not ask for it. With no key, encrypted responses are left unchanged.
 
 | React (Vite) | Next.js |
 | --- | --- |
@@ -72,7 +72,7 @@ Each `VITE_*` variable became `NEXT_PUBLIC_*` with the same meaning; see `.env.e
 `.github/workflows/deploy-production.yml` runs on every push to `main`. The build job typechecks, lints, runs the unit tests and runs `next build`. It then packs `.next/standalone`, `.next/static`, `public` and `ecosystem.config.cjs` into one tarball. The deploy job uploads that tarball over SSH to `/var/www/LendigoMicroCare/LendigoMicro-NextFrontend/releases/<sha>`, points `current` at it, restarts the PM2 app `lendigo-next-frontend` (`node server.js` on `127.0.0.1:3001`), checks `/login`, and keeps the five most recent releases.
 
 - **Port.** The app runs on 3001 because port 3000 is already used by the marketing website (`lendigomicrocare.com`).
-- **Secrets.** The workflow reuses `PROD_HOST`, `PROD_USER` and `PROD_SSH_KEY` from the existing workflows and adds `NEXT_PUBLIC_PAYLOAD_ENCRYPTION_KEY`. Add all four to this repository's GitHub secrets.
+- **Secrets.** The workflow needs `PROD_HOST`, `PROD_USER` and `PROD_SSH_KEY`. Add those three to this repository's GitHub secrets.
 
 **One-time server setup:**
 - Node >= 20.9 (Next 16) and PM2. PM2 is already used by the backend.

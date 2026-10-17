@@ -169,6 +169,15 @@ export default function Account360Page() {
   const financials = data?.financials;
   const actions = data?.actions || {};
 
+  const displayTabs = useMemo(() => {
+    return TABS.map((tab) => {
+      if (tab.id === 'noc' && account?.status === 'settlement_closed') {
+        return { ...tab, label: 'Settlement Letter' };
+      }
+      return tab;
+    });
+  }, [account?.status]);
+
   const handlePtp = async () => {
     setSubmitting(true);
     try {
@@ -411,7 +420,7 @@ export default function Account360Page() {
           </div>
 
           <div className="flex gap-1 border-b border-slate-200 overflow-x-auto">
-            {TABS.map((tab) => (
+            {displayTabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
@@ -592,42 +601,61 @@ export default function Account360Page() {
 
             {activeTab === 'noc' && (
               <div className="space-y-3 text-sm">
-                <div className="rounded-lg border border-slate-100 p-4">
-                  <p className="text-[11px] uppercase text-slate-400 font-semibold">NOC status</p>
-                  <p className="text-lg font-bold capitalize mt-1">{data.noc?.status || 'none'}</p>
-                  {data.noc?.status === 'scheduled' && (
-                    <p className="text-slate-600 mt-2">
-                      NOC will be issued on {formatDate(data.noc.eligibleAt)} (3 days after closure).
+                {account?.status === 'settlement_closed' ? (
+                  <div className="rounded-lg border border-slate-100 p-4">
+                    <p className="text-[11px] uppercase text-slate-400 font-semibold">Settlement letter status</p>
+                    <p className="text-lg font-bold capitalize mt-1 text-slate-900">
+                      {data.noc?.settlementLetterUrl ? 'Issued' : 'Pending'}
                     </p>
-                  )}
-                  {data.noc?.issuedAt && (
-                    <p className="text-slate-600 mt-1">Issued on {formatDate(data.noc.issuedAt)}</p>
-                  )}
-                  {data.noc?.settlementLetterUrl && (
-                    <Button size="sm" variant="outline" className="mt-3 mr-2" asChild>
-                      <a href={data.noc.settlementLetterUrl} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="w-3.5 h-3.5 mr-1" /> Download settlement letter
-                      </a>
-                    </Button>
-                  )}
-                  {data.noc?.downloadUrl && (
-                    <Button size="sm" className="mt-3" asChild>
-                      <a href={data.noc.downloadUrl} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="w-3.5 h-3.5 mr-1" /> Download NOC
-                      </a>
-                    </Button>
-                  )}
-                  {['closed', 'settlement_closed'].includes(account.status) && data.noc?.status === 'scheduled' && (
-                    <p className="text-xs text-amber-700 mt-2 flex items-center gap-1">
-                      <FileText className="w-3.5 h-3.5" /> NOC is scheduled and will be sent to the customer after the cooling period. If the customer needs it urgently, you can generate it now.
+                    <p className="text-xs text-slate-600 mt-2">
+                      This loan was closed under an agreed settlement. In standard lending practice, an NOC (No Objection / No Dues Certificate) is not issued for settled accounts. The official Settlement Letter is provided below.
                     </p>
-                  )}
-                  {['closed', 'settlement_closed'].includes(account.status) && data.noc?.status !== 'issued' && (
-                    <Button size="sm" className="mt-3" disabled={submitting} onClick={handleIssueNoc}>
-                      <FileText className="w-3.5 h-3.5 mr-1" /> {submitting ? 'Generating…' : 'Generate NOC now'}
-                    </Button>
-                  )}
-                </div>
+                    {data.noc?.settlementLetterUrl ? (
+                      <Button size="sm" className="mt-3" asChild>
+                        <a href={data.noc.settlementLetterUrl} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="w-3.5 h-3.5 mr-1" /> Download settlement letter
+                        </a>
+                      </Button>
+                    ) : (
+                      <p className="text-xs text-slate-400 mt-2">Settlement letter will be available shortly.</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-slate-100 p-4">
+                    <p className="text-[11px] uppercase text-slate-400 font-semibold">NOC status</p>
+                    <p className="text-lg font-bold capitalize mt-1">{data.noc?.status || 'none'}</p>
+                    {data.noc?.status === 'scheduled' && (
+                      <p className="text-slate-600 mt-2">
+                        NOC will be issued on {formatDate(data.noc.eligibleAt)} (3 days after closure).
+                      </p>
+                    )}
+                    {data.noc?.issuedAt && (
+                      <p className="text-slate-600 mt-1">Issued on {formatDate(data.noc.issuedAt)}</p>
+                    )}
+                    {data.noc?.downloadUrl && (
+                      <Button size="sm" className="mt-3" asChild>
+                        <a href={data.noc.downloadUrl} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="w-3.5 h-3.5 mr-1" /> Download NOC
+                        </a>
+                      </Button>
+                    )}
+                    {account?.status === 'closed' && data.noc?.status === 'scheduled' && (
+                      <p className="text-xs text-amber-700 mt-2 flex items-center gap-1">
+                        <FileText className="w-3.5 h-3.5" /> NOC is scheduled and will be sent to the customer after the cooling period. If the customer needs it urgently, you can generate it now.
+                      </p>
+                    )}
+                    {account?.status === 'closed' && data.noc?.status !== 'issued' && (
+                      <Button size="sm" className="mt-3" disabled={submitting} onClick={handleIssueNoc}>
+                        <FileText className="w-3.5 h-3.5 mr-1" /> {submitting ? 'Generating…' : 'Generate NOC now'}
+                      </Button>
+                    )}
+                    {account?.status !== 'closed' && (
+                      <p className="text-xs text-slate-500 mt-2">
+                        NOC is only issued once the loan is fully repaid and closed.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

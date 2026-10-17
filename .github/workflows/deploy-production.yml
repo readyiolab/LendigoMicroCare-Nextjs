@@ -36,17 +36,10 @@ jobs:
       - name: Unit tests
         run: npm test
 
-      # NEXT_PUBLIC_* values are inlined here from the committed .env.production;
-      # the encryption key comes from a repository secret instead of git.
+      # NEXT_PUBLIC_* values are inlined here from the committed .env.production.
+      # Payload encryption is off for this deploy, so no encryption-key secret is required.
       - name: Build
-        env:
-          NEXT_PUBLIC_PAYLOAD_ENCRYPTION_KEY: ${{ secrets.NEXT_PUBLIC_PAYLOAD_ENCRYPTION_KEY }}
-        run: |
-          if [ -z "$NEXT_PUBLIC_PAYLOAD_ENCRYPTION_KEY" ]; then
-            echo "Missing repository secret NEXT_PUBLIC_PAYLOAD_ENCRYPTION_KEY (must match backend PAYLOAD_ENCRYPTION_KEY)"
-            exit 1
-          fi
-          npm run build
+        run: npm run build
 
       - name: Assemble release
         run: |

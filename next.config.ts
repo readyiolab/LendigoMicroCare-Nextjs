@@ -16,6 +16,16 @@ const nextConfig: NextConfig = {
     if (!/^https?:\/\//.test(apiBaseUrl)) return []
     return [{ source: "/api/v1/:path*", destination: `${apiBaseUrl}/:path*` }]
   },
+  async headers() {
+    return [
+      {
+        source: "/sidebar-icons/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+    ]
+  },
 }
 
 export default nextConfig

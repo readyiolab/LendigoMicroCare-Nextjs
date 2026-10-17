@@ -152,7 +152,16 @@ export default function DocumentsTab() {
     : documentsIdleUnload
       ? 'Failed to load — click Refresh'
       : null;
-  const downloadingAll = downloadingDoc === 'download_all';
+  const downloadingAll = downloadingDoc === 'zip_queued'
+    || downloadingDoc === 'zip_processing'
+    || downloadingDoc === 'zip_ready';
+  const zipButtonLabel = downloadingDoc === 'zip_queued'
+    ? 'Queued…'
+    : downloadingDoc === 'zip_processing'
+      ? 'Preparing ZIP…'
+      : downloadingDoc === 'zip_ready'
+        ? 'Ready'
+        : 'Download All';
 
   useEffect(() => {
     if (!docsLoaded && !documentsLoading && !documentsRefreshing) {
@@ -364,7 +373,7 @@ export default function DocumentsTab() {
           ) : (
             <Download className="w-3.5 h-3.5 mr-1.5" />
           )}
-          {downloadingAll ? 'Preparing ZIP…' : 'Download All'}
+          {zipButtonLabel}
         </Button>
         <Button
           type="button"
@@ -1042,6 +1051,7 @@ export default function DocumentsTab() {
       <AlertDialog
         open={deleteDialog.open}
         onOpenChange={(open) => {
+          if (uploadingKey === 'delete') return;
           if (!open) setDeleteDialog({ open: false, id: null, label: '' });
         }}
       >
@@ -1053,16 +1063,18 @@ export default function DocumentsTab() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={uploadingKey === 'delete'}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-rose-600 hover:bg-rose-700"
-              onClick={() => {
-                const id = deleteDialog.id;
-                setDeleteDialog({ open: false, id: null, label: '' });
-                if (id) handleDeleteOtherDocument(id);
+              disabled={uploadingKey === 'delete'}
+              onClick={async (event) => {
+                event.preventDefault();
+                if (uploadingKey === 'delete' || !deleteDialog.id) return;
+                const ok = await handleDeleteOtherDocument(deleteDialog.id);
+                if (ok) setDeleteDialog({ open: false, id: null, label: '' });
               }}
             >
-              Delete
+              {uploadingKey === 'delete' ? 'Deleting…' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

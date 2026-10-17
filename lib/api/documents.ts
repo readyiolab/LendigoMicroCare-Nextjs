@@ -111,9 +111,15 @@ export const documentsAPI = {
 
   // Download all application documents as a ZIP (original bytes)
   downloadAllDocuments: (applicationId: Id) =>
-    apiClient.get(`/documents/download-all/${encodeURIComponent(applicationId)}`, {
+    apiClient.get(`/documents/download-all/${encodeURIComponent(applicationId)}`),
+
+  getDocumentZipJob: (applicationId: Id, jobId: Id) =>
+    apiClient.get(`/documents/download-all/${encodeURIComponent(applicationId)}/jobs/${jobId}`),
+
+  downloadDocumentZipFile: (applicationId: Id, jobId: Id) =>
+    apiClient.get(`/documents/download-all/${encodeURIComponent(applicationId)}/jobs/${jobId}/file`, {
       responseType: 'blob',
-      timeout: 300000,
+      timeout: 120000,
     }),
 
   // Get Document Vault (Signed Agreements, NOC, etc.)

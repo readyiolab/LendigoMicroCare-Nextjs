@@ -204,7 +204,7 @@ function HeaderSearch({ navigate }) {
 }
 
 const ADMIN_BRAND_LOGO_URL =
-  'https://res.cloudinary.com/dbyjiqjui/image/upload/v1770539125/logo_meijmf.webp';
+  'https://res.cloudinary.com/dbyjiqjui/image/upload/f_auto,q_auto,w_160/v1770539125/logo_meijmf.webp';
 
 export default function AdminLayout() {
   const dispatch = useDispatch();
@@ -226,6 +226,10 @@ export default function AdminLayout() {
   const isPinnedOpen = !isSidebarCollapsed;
   const showWideSidebar = isPinnedOpen || hoverExpanded;
   const navCompact = !showWideSidebar;
+  const [keepNavIcons, setKeepNavIcons] = useState(false);
+  useEffect(() => {
+    if (navCompact) setKeepNavIcons(true);
+  }, [navCompact]);
 
   const handleSidebarEnter = useCallback(() => {
     if (hoverLeaveTimer.current) {
@@ -433,58 +437,50 @@ export default function AdminLayout() {
                 );
               };
 
-              if (navCompact) {
-                return (
-                  <div key={group.id} className="mb-2 space-y-1">
-                    {group.children.map((item) => renderNavItem(item))}
-                  </div>
-                );
-              }
-
               const singleChild = group.children.length === 1;
-
-              if (singleChild) {
-                return (
-                  <div key={group.id} className="mb-1">
-                    {renderNavItem(group.children[0])}
-                  </div>
-                );
-              }
 
               return (
                 <div key={group.id} className="mb-1">
-                  <button
-                    type="button"
-                    onClick={() => toggleGroup(group.id)}
-                    aria-expanded={isOpen}
+                  {!singleChild && (
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(group.id)}
+                      aria-expanded={isOpen}
+                      className={cn(
+                        'flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left transition-colors duration-150',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20',
+                        navCompact && 'hidden',
+                        groupHasActive
+                          ? 'text-[#111111]'
+                          : 'text-[#444444] hover:bg-white/70 hover:text-[#111111]'
+                      )}
+                    >
+                      <NavGlyph
+                        id={group.id}
+                        Icon={GroupIcon}
+                        strokeWidth={groupHasActive ? 2 : 1.75}
+                        className={cn('h-[18px] w-[18px] shrink-0', groupHasActive ? 'text-[#111111]' : 'text-[#444444]')}
+                      />
+                      <span className="flex-1 truncate text-sm font-medium">
+                        {group.label}
+                      </span>
+                      <ChevronDown
+                        className={cn(
+                          'h-4 w-4 shrink-0 text-[#666666] transition-transform duration-200',
+                          isOpen && 'rotate-180'
+                        )}
+                      />
+                    </button>
+                  )}
+                  {(navCompact || keepNavIcons || singleChild || isOpen) && (
+                  <div
                     className={cn(
-                      'flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left transition-colors duration-150',
-                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20',
-                      groupHasActive
-                        ? 'text-[#111111]'
-                        : 'text-[#444444] hover:bg-white/70 hover:text-[#111111]'
+                      navCompact ? 'space-y-1' : 'relative ml-[21px] mt-1 space-y-0.5 border-l border-[#E5E5E5] pl-2',
+                      !navCompact && !singleChild && !isOpen && 'hidden'
                     )}
                   >
-                    <NavGlyph
-                      id={group.id}
-                      Icon={GroupIcon}
-                      strokeWidth={groupHasActive ? 2 : 1.75}
-                      className={cn('h-[18px] w-[18px] shrink-0', groupHasActive ? 'text-[#111111]' : 'text-[#444444]')}
-                    />
-                    <span className="flex-1 truncate text-sm font-medium">
-                      {group.label}
-                    </span>
-                    <ChevronDown
-                      className={cn(
-                        'h-4 w-4 shrink-0 text-[#666666] transition-transform duration-200',
-                        isOpen && 'rotate-180'
-                      )}
-                    />
-                  </button>
-                  {isOpen && (
-                    <div className="relative ml-[21px] mt-1 space-y-0.5 border-l border-[#E5E5E5] pl-2">
-                      {group.children.map((item) => renderNavItem(item, true))}
-                    </div>
+                    {group.children.map((item) => renderNavItem(item, !navCompact && !singleChild))}
+                  </div>
                   )}
                 </div>
               );

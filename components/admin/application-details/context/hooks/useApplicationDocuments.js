@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { adminAPI, documentsAPI } from '@/lib/api';
 import { detectMimeType } from '../utils/documentMime';
 import {
@@ -71,9 +72,15 @@ export function useApplicationDocuments({
     const appRef = loanApp?.id || applicationId;
     const appNumber = loanApp?.application_number || applicationId;
     try {
-      setDownloadingDoc('download_all');
+      setDownloadingDoc('zip_queued');
       setError('');
-      await downloadAllApplicationDocuments(appRef, appNumber);
+      await downloadAllApplicationDocuments(appRef, appNumber, {
+        onStatus: (phase) => {
+          if (phase === 'processing') setDownloadingDoc('zip_processing');
+          else if (phase === 'ready') setDownloadingDoc('zip_ready');
+          else setDownloadingDoc('zip_queued');
+        },
+      });
       setMessage('All documents downloaded');
     } catch (err) {
       console.error('Download-all error:', err);
@@ -508,10 +515,11 @@ export function useApplicationDocuments({
     }
   };
 
+  const deletingRef = useRef(false);
   const handleDeleteOtherDocument = async (documentId) => {
-    if (!documentId) return;
-    setUploadingKey('other');
-    setUploading(true);
+    if (!documentId || deletingRef.current) return false;
+    deletingRef.current = true;
+    setUploadingKey('delete');
     setError('');
     try {
       const response = await adminAPI.deleteOtherDocument(applicationId, documentId);
@@ -526,14 +534,16 @@ export function useApplicationDocuments({
           };
         });
         setMessage('Document deleted');
-      } else {
-        setError(response.message || 'Failed to delete document');
+        return true;
       }
+      setError(response.message || 'Failed to delete document');
+      return false;
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Delete failed');
+      return false;
     } finally {
+      deletingRef.current = false;
       setUploadingKey(null);
-      setUploading(false);
     }
   };
 
