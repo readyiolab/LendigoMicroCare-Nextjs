@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { adminAPI } from '@/lib/api';
+import { loadBureauReport as loadBureauReportWithFallback } from '../utils/loadBureauReport';
 
 export function useApplicationBureauSummary({ applicationId, loanApp }) {
     const [bureauSummary, setBureauSummary] = useState(null);
@@ -92,6 +93,16 @@ export function useApplicationBureauSummary({ applicationId, loanApp }) {
         return promise;
     }, [applicationRef]);
 
+    const fetchBureauReport = useCallback(
+        ({ force = false } = {}) =>
+            loadBureauReportWithFallback({
+                fetchDetail: fetchBureauDetail,
+                fetchSummary: fetchBureauSummary,
+                force,
+            }),
+        [fetchBureauDetail, fetchBureauSummary]
+    );
+
     const invalidateBureauSummary = useCallback(() => {
         bureauSummaryRef.current = null;
         setBureauSummary(null);
@@ -112,6 +123,7 @@ export function useApplicationBureauSummary({ applicationId, loanApp }) {
         bureauDetailLoading,
         bureauDetailError,
         fetchBureauDetail,
+        fetchBureauReport,
         invalidateBureauSummary,
     };
 }

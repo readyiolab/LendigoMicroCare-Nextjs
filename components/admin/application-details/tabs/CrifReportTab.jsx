@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FileText,
   RefreshCw,
@@ -288,11 +288,10 @@ export default function CrifReportTab({ onOpenCreditCheck }) {
     handleForceCrifRefetch,
     bureauSummary,
     bureauSummaryLoading,
-    fetchBureauSummary,
     bureauDetail,
     bureauDetailLoading,
     bureauDetailError,
-    fetchBureauDetail,
+    fetchBureauReport,
   } = useApplicationContext();
   const { admin } = useAdminAuth();
   const applicationRef = loanApp?.application_number || applicationId;
@@ -313,23 +312,22 @@ export default function CrifReportTab({ onOpenCreditCheck }) {
     if (!applicationRef) return;
     setError('');
     try {
-      const [data] = await Promise.all([
-        fetchBureauSummary({ force }),
-        fetchBureauDetail({ force }),
-      ]);
-      if (!data && !bureauSummary) setError('No credit report on file yet. Run Credit Check to fetch CIBIL.');
+      const data = await fetchBureauReport({ force });
+      if (!data) setError('No credit report on file yet. Run Credit Check to fetch CIBIL.');
     } catch (err) {
       setError(err?.response?.data?.message || err?.message || 'Failed to load credit report');
     }
-  }, [applicationRef, fetchBureauSummary, fetchBureauDetail, bureauSummary]);
+  }, [applicationRef, fetchBureauReport]);
 
   useEffect(() => {
-    if (!bureauSummary || !bureauDetail) {
+    if (!bureauSummary && !bureauDetail) {
       load(false);
     }
   }, [load, bureauSummary, bureauDetail]);
 
-  const loading = bureauSummaryLoading && !bureauSummary;
+  const loading =
+    (bureauDetailLoading && !bureauDetail) ||
+    (bureauSummaryLoading && !bureauSummary);
   const summary = detail || bureauSummary;
 
   const state = useMemo(() => bureauState(summary), [summary]);

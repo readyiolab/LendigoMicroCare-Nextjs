@@ -110,7 +110,7 @@ export const STATUS_BADGE_CONFIG = {
   },
   payment_pending: {
     variant: 'default',
-    label: 'Ready for Payout',
+    label: 'Disbursal Sheet Send',
     className: 'bg-yellow-500 text-white border-yellow-500',
   },
   disbursed: {

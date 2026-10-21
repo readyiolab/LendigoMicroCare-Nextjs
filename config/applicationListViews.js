@@ -78,9 +78,9 @@ const STATUS_VIEWS = {
   },
   payment_pending: {
     id: 'payment_pending',
-    title: 'Payout review',
+    title: 'Disbursal Sheet Send',
     subtitle: 'Payment pending disbursement',
-    filterLabel: 'Payment pending',
+    filterLabel: 'Disbursal Sheet Send',
     emptyMessage: 'No applications awaiting payout.',
   },
 };

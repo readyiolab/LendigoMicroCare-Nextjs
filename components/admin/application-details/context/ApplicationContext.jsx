@@ -324,13 +324,6 @@ export const ApplicationProvider = ({
             } else {
                 bootstrap.fetchBankSection(false);
             }
-        } else if (activeTab === 'aa') {
-            bankReportState.fetchBankReport({ force: false });
-        } else if (activeTab === 'crif') {
-            Promise.all([
-                bureau.fetchBureauSummary({ force: false }),
-                bureau.fetchBureauDetail({ force: false }),
-            ]).catch(() => {});
         } else if (activeTab === 'journey') {
             bootstrap.fetchJourneySection(false);
         } else if (activeTab === 'loan_account') {
@@ -351,9 +344,6 @@ export const ApplicationProvider = ({
         bootstrap.fetchBankSection,
         bootstrap.fetchJourneySection,
         bootstrap.fetchLoanAccountView,
-        bankReportState.fetchBankReport,
-        bureau.fetchBureauSummary,
-        bureau.fetchBureauDetail,
     ]);
 
     useEffect(() => {
@@ -905,6 +895,7 @@ export const ApplicationProvider = ({
         bureauDetailLoading: bureau.bureauDetailLoading,
         bureauDetailError: bureau.bureauDetailError,
         fetchBureauDetail: bureau.fetchBureauDetail,
+        fetchBureauReport: bureau.fetchBureauReport,
         invalidateBureauSummary: bureau.invalidateBureauSummary,
         productDetails, setProductDetails,
         esignDocs, setEsignDocs,

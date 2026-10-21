@@ -101,7 +101,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "Payment",
     icon: "Banknote",
     children: [
-      { id: "payout-review", label: "Payout review", path: "/admin/applications?status=payment_pending", roles: ["operations", "operations_manager", "super_admin", "admin", "underwriter", "approver"], icon: "Coins" },
+      { id: "payout-review", label: "Disbursal Sheet Send", path: "/admin/applications?status=payment_pending", roles: ["operations", "operations_manager", "super_admin", "admin", "underwriter", "approver"], icon: "Coins" },
       { id: "disbursal-sheet", label: "Disbursal sheet", path: "/admin/disbursal-sheet", roles: ["operations", "operations_manager", "super_admin", "admin", "underwriter", "approver"], icon: "FileSpreadsheet" },
       { id: "video", label: "Video declarations", path: "/admin/video-declarations", roles: ["super_admin", "operations_manager", "operations", "underwriter", "approver"], icon: "Video" },
       { id: "repayments", label: "Repayments", path: "/admin/repayments", roles: ["super_admin", "operations_manager", "underwriter", "approver"], icon: "Banknote" },

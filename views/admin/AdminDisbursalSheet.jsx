@@ -38,7 +38,7 @@ import {
 } from '@/utils/statusUtils';
 
 const TABS = [
-  { id: 'eligible', label: 'Ready for payout', tone: 'blue' },
+  { id: 'eligible', label: 'Disbursal Sheet Send', tone: 'blue' },
   { id: 'exported', label: 'Sent to bank', tone: 'amber' },
   { id: 'queued', label: 'Added to sheet', tone: 'indigo' },
   { id: 'completed', label: 'Disbursed', tone: 'emerald' },
@@ -379,7 +379,7 @@ export default function AdminDisbursalSheet() {
           <div className="min-w-0">
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Disbursal Sheet</h1>
             <p className="text-sm text-slate-500 mt-1">
-              Ready for payout → add to sheet → export for bank → punch UTR when money is sent. Use Download MIS for the ops report.
+              Disbursal Sheet Send → add to sheet → export for bank → punch UTR when money is sent. Use Download MIS for the ops report.
             </p>
           </div>
         </div>

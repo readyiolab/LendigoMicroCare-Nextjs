@@ -20,7 +20,7 @@ const QUICK_STATUS_FILTERS = [
   { id: 'rejected', label: 'Rejected' },
   { id: 'approved', label: 'Sanction' },
   { id: 'disbursed', label: 'Disbursed' },
-  { id: 'payment_pending', label: 'Ready for payout' },
+  { id: 'payment_pending', label: 'Disbursal Sheet Send' },
 ];
 
 // Non-telecaller roles work the post-recommendation pipeline.
@@ -33,7 +33,7 @@ const PIPELINE_STATUS_FILTERS = [
   { id: 'video_declaration_submitted', label: 'Video Submitted', countKeys: ['video_declaration_submitted'] },
   { id: 'esign_pending', label: 'eSign Pending', countKeys: ['esign_pending'] },
   { id: 'emandate', label: 'eMandate', countKeys: ['mandate_pending', 'esign_completed'] },
-  { id: 'payment_pending', label: 'Ready for payout', countKeys: ['payment_pending'] },
+  { id: 'payment_pending', label: 'Disbursal Sheet Send', countKeys: ['payment_pending'] },
   { id: 'failed', label: 'Rejected', countKeys: ['failed'] },
 ];
 
