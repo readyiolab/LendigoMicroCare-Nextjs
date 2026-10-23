@@ -125,11 +125,14 @@ export default function AdminCreditBuckets() {
         bucketRepeat: !!Number(m.bucket_repeat),
         bucketSanctional: !!Number(m.bucket_sanctional),
       }));
-      const res = await adminAPI.updateCreditBuckets({ rows });
+      const res = await adminAPI.updateCreditBuckets({ rows, autoRebalance: true });
       if (res?.status === 1) {
+        const count = res.data?.rebalancedCount || 0;
         setBanner({
           type: 'success',
-          text: 'Credit bucket labels saved. Submitted cases are still split equally across all active credit managers.',
+          text: count > 0
+            ? `Credit bucket settings saved. Reassigned ${count} open case(s) from disabled buckets to eligible managers.`
+            : 'Credit bucket settings saved successfully.',
         });
         loadBuckets();
       } else {
@@ -152,12 +155,12 @@ export default function AdminCreditBuckets() {
         if (count > 0) {
           setBanner({
             type: 'success',
-            text: `Moved ${count} open case(s) from inactive credit managers to the active managers with the lightest queue.`,
+            text: `Moved ${count} open case(s) from inactive managers or disabled buckets to eligible managers with the lightest queue.`,
           });
         } else {
           setBanner({
             type: 'success',
-            text: 'All open cases are already with active credit managers. Nothing needed moving.',
+            text: 'All open cases are already with eligible active credit managers. Nothing needed moving.',
           });
         }
         await loadBuckets();
@@ -181,7 +184,7 @@ export default function AdminCreditBuckets() {
             Credit bucket management
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Submitted cases are split equally across all active Credit Managers. Drafts are assigned by Super Admin only.
+            Submitted cases are split equally across eligible active Credit Managers based on bucket toggles. Drafts are assigned by Super Admin only.
           </p>
         </div>
         <div className="flex items-center gap-2">
