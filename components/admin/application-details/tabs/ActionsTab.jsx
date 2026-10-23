@@ -147,6 +147,7 @@ export default function ActionsTab() {
             'video_declaration_pending',
             'video_declaration_submitted',
             'video_declaration_rejected',
+            'offer_rejected',
         ].includes(appStatus) || awaitingRevision;
 
     useEffect(() => {
@@ -225,7 +226,10 @@ export default function ActionsTab() {
         if (s === 'approved') {
             return 'Sanctioned. Confirm the CAM amount, tenure and platform fee, then send the offer to the customer.';
         }
-        if (s === 'rejected' || s === 'offer_rejected') {
+        if (s === 'offer_rejected') {
+            return 'Customer declined the offer. You can adjust the terms and send a new offer below.';
+        }
+        if (s === 'rejected') {
             return 'Application closed. See History tab for reason.';
         }
         if (['esign_completed', 'mandate_pending', 'disbursed', 'closed'].includes(s)) {
@@ -738,11 +742,15 @@ export default function ActionsTab() {
                                     <p className="text-xs font-medium text-emerald-900">
                                         {appStatus === 'offer_sent'
                                             ? 'The sanction email was sent. Change Platform Fee inside the product range and send the offer again.'
+                                            : appStatus === 'offer_rejected'
+                                            ? 'Offer was declined by the customer. Confirm product, amount, and tenure, then re-send the offer.'
                                             : 'Sanctioned — confirm product and amount, then send the offer to the customer.'}
                                     </p>
                                     <p className="text-[10px] text-emerald-700 mt-0.5">
                                         {appStatus === 'offer_sent'
                                             ? 'The customer gets a new sanction email. Amount, tenure, and interest stay on this form.'
+                                            : appStatus === 'offer_rejected'
+                                            ? 'Re-sending will update the offer and notify the customer to review the new terms.'
                                             : 'LAN is already issued. Approve again is not needed here.'}
                                     </p>
                                 </div>

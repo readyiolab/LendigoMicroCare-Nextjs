@@ -22,7 +22,7 @@ import { filterActivatableProductFees } from '@/lib/utils/feeBreakdown';
 import { SECTION_META, normalizeSectionId } from '../shell/sectionConfig';
 
 const ApplicationContext = createContext();
-const TERMINAL_APP_STATUSES = ['disbursed', 'closed', 'rejected', 'offer_rejected'];
+const TERMINAL_APP_STATUSES = ['disbursed', 'closed', 'rejected'];
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const useApplicationContext = () => {
