@@ -591,7 +591,7 @@ export const ApplicationProvider = ({
         }
 
         if (nextStatus === 'offer_sent') {
-            const amountNum = parseFloat(statusUpdate.approvedAmount);
+            const amountNum = parseFloat(overrides.approvedAmount !== undefined ? overrides.approvedAmount : statusUpdate.approvedAmount);
             if (!Number.isFinite(amountNum) || amountNum <= 0) {
                 setError('Approved amount must be greater than zero before sending the offer');
                 return;
@@ -603,14 +603,19 @@ export const ApplicationProvider = ({
         setMessage('');
         try {
             if (nextStatus === 'offer_sent') {
-                const amountNum = parseFloat(statusUpdate.approvedAmount);
+                const effectiveAmount = parseFloat(overrides.approvedAmount !== undefined ? overrides.approvedAmount : statusUpdate.approvedAmount);
+                const effectiveTenure = parseInt(overrides.tenureDays !== undefined ? overrides.tenureDays : statusUpdate.tenureDays, 10);
+                const effectiveRate = parseFloat(overrides.interestRateDaily !== undefined ? overrides.interestRateDaily : statusUpdate.interestRateDaily);
+                const effectiveFees = overrides.feeBreakdown !== undefined ? overrides.feeBreakdown : statusUpdate.feeBreakdown;
+                const effectiveRemarks = overrides.remarks !== undefined ? overrides.remarks : statusUpdate.remarks;
+
                 const offerPayload = {
                     product_id: statusUpdate.productId ? Number(statusUpdate.productId) : undefined,
-                    approved_amount: amountNum,
-                    tenure_days: parseInt(statusUpdate.tenureDays, 10),
-                    interest_rate_daily: parseFloat(statusUpdate.interestRateDaily),
-                    fee_breakdown: statusUpdate.feeBreakdown || undefined,
-                    admin_remarks: statusUpdate.remarks || `Offer sent with ${statusUpdate.tenureDays} days tenure`,
+                    approved_amount: effectiveAmount,
+                    tenure_days: effectiveTenure,
+                    interest_rate_daily: effectiveRate,
+                    fee_breakdown: effectiveFees || undefined,
+                    admin_remarks: effectiveRemarks || `Offer sent with ${effectiveTenure} days tenure`,
                 };
                 const response = await offerAPI.sendOffer(applicationId, offerPayload);
                 if (response.status === 1) {
@@ -619,7 +624,7 @@ export const ApplicationProvider = ({
                     setStatusUpdate((prev) => ({
                         ...prev,
                         status: newStatus,
-                        approvedAmount: amountNum || prev.approvedAmount,
+                        approvedAmount: effectiveAmount || prev.approvedAmount,
                     }));
                     setData((prev) => {
                         if (!prev?.application) return prev;

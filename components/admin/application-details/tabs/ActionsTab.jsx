@@ -25,6 +25,7 @@ import { verdictLabel } from '@/lib/utils/creditDecisionDisplay';
 import { DetailTable, DetailRow } from '../common/DetailTable';
 import RejectApplicationDialog from '../RejectApplicationDialog';
 import { filterActivatableProductFees } from '@/lib/utils/feeBreakdown';
+import { formatInr } from '../camFieldCatalog';
 
 const WORKFLOW_STEPS = [
     'Customer applies → complete Digitap KYC (Aadhaar, PAN, bank, selfie).',
@@ -101,6 +102,58 @@ function pickLimitProduct(products, preferredId) {
         products[0] ||
         null
     );
+}
+
+function ResultsStrip({ particulars, policy }) {
+  const tenureManual = particulars?.tenure_days_override === 'YES';
+  const chips = [
+    { label: 'Recommended', value: formatInr(particulars?.loan_recommended) },
+    { label: 'Eligible loan', value: formatInr(particulars?.eligible_loan) },
+    {
+      label: tenureManual ? 'Tenure · Manual' : 'Tenure',
+      value: particulars?.tenure_days ? `${particulars.tenure_days}d` : '—',
+    },
+    { label: 'Net disb.', value: formatInr(particulars?.net_disb_amount) },
+    { label: 'Repay', value: formatInr(particulars?.repay_amount) },
+    { label: 'Final FOIR', value: particulars?.final_foir_pct ? `${particulars.final_foir_pct}%` : '—' },
+    { label: 'Risk', value: particulars?.risk_profile || '—', strong: true },
+    { label: 'Decision', value: particulars?.decision || '—', strong: true },
+  ];
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-3 text-white shadow-md">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs font-bold uppercase tracking-wide text-slate-300">CAM result summary</p>
+        {policy?.product_max != null && (
+          <p className="text-[11px] text-slate-400">
+            Product max ₹{formatInr(policy.product_max)}
+            {policy.customer_max ? ` · Customer max ₹${formatInr(policy.customer_max)}` : ''}
+            {policy.config_version ? ` · ${policy.config_version}` : ''}
+          </p>
+        )}
+      </div>
+      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 lg:grid-cols-8">
+        {chips.map((c) => (
+          <div
+            key={c.label}
+            className={`rounded-lg px-2 py-1.5 ${
+              c.strong ? 'bg-white/20 ring-1 ring-white/30' : 'bg-white/10'
+            }`}
+          >
+            <p className="text-[10px] uppercase tracking-wide text-slate-400">{c.label}</p>
+            <p className={`tabular-nums text-white ${c.strong ? 'text-base font-bold' : 'text-sm font-semibold'}`}>
+              {c.value}
+            </p>
+          </div>
+        ))}
+      </div>
+      {particulars?.recommendation_reason && (
+        <p className="mt-2 text-[11px] text-slate-300">Cap used: {particulars.recommendation_reason}</p>
+      )}
+      {particulars?.decision_reason && (
+        <p className="text-[11px] text-slate-300">Decision: {particulars.decision_reason}</p>
+      )}
+    </div>
+  );
 }
 
 export default function ActionsTab() {
@@ -249,6 +302,54 @@ export default function ActionsTab() {
     const [loadingProducts, setLoadingProducts] = useState(() => !getCachedOfferProducts());
     const offerSeedKeyRef = useRef('');
     const [tenureClampedFrom, setTenureClampedFrom] = useState(null);
+
+    // Load CAM particulars directly so ActionsTab is always in sync with CAM
+    const [camData, setCamData] = useState(null);
+    const [camLoading, setCamLoading] = useState(false);
+
+    useEffect(() => {
+        const camId = applicationId || loanApp?.id;
+        if (!camId) return;
+        let cancelled = false;
+        setCamLoading(true);
+        adminAPI.getApplicationCam(camId)
+            .then((res) => {
+                if (!cancelled && res) {
+                    setCamData(res.data || res);
+                }
+            })
+            .catch((err) => {
+                console.error('[ActionsTab] Failed to fetch CAM:', err);
+            })
+            .finally(() => {
+                if (!cancelled) setCamLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [applicationId, loanApp?.id]);
+
+    const camParticulars = camData?.particulars || null;
+    const camPolicy = camData?.policy || null;
+
+    useEffect(() => {
+        if (!camParticulars || Object.keys(camParticulars).length === 0) return;
+        const camAmt = positiveAmountOrEmpty(camParticulars.loan_recommended);
+        const camTenure = finiteNumber(camParticulars.tenure_days);
+        const camRoi = finiteNumber(camParticulars.roi_pct);
+        const camFee = finiteNumber(camParticulars.admin_fee_pct);
+
+        setStatusUpdate((prev) => {
+            const next = { ...prev };
+            if (camAmt != null && camAmt > 0) next.approvedAmount = camAmt;
+            if (camTenure != null && camTenure > 0) next.tenureDays = String(camTenure);
+            if (camRoi != null) next.interestRateDaily = String(camRoi);
+            if (camFee != null) {
+                next.feeBreakdown = { ...(prev.feeBreakdown || {}), process_fee: camFee };
+            }
+            return next;
+        });
+    }, [camParticulars, setStatusUpdate]);
 
     const showOfferParams = ['offer_sent', 'approved', 'recommended'].includes(statusUpdate.status);
     const isSendOffer = statusUpdate.status === 'offer_sent';
@@ -426,6 +527,22 @@ export default function ActionsTab() {
 
     const submitDecision = (e) => {
         submitAttemptedAtRef.current = Date.now();
+        if (camParticulars && Object.keys(camParticulars).length > 0) {
+            const camAmt = positiveAmountOrEmpty(camParticulars.loan_recommended);
+            const camTenure = finiteNumber(camParticulars.tenure_days);
+            const camRoi = finiteNumber(camParticulars.roi_pct);
+            const camFee = finiteNumber(camParticulars.admin_fee_pct);
+
+            const overrides = {};
+            if (camAmt != null && camAmt > 0) overrides.approvedAmount = camAmt;
+            if (camTenure != null && camTenure > 0) overrides.tenureDays = String(camTenure);
+            if (camRoi != null) overrides.interestRateDaily = String(camRoi);
+            if (camFee != null) {
+                overrides.feeBreakdown = { ...(statusUpdate.feeBreakdown || {}), process_fee: camFee };
+            }
+            handleStatusUpdate(e, overrides);
+            return;
+        }
         handleStatusUpdate(e);
     };
 
@@ -827,285 +944,196 @@ export default function ActionsTab() {
                                         <p className="text-[11px] text-slate-500 leading-relaxed px-0.5">
                                             {STATUS_OPTION_HELP[statusUpdate.status]}
                                         </p>
-                                    )}
-                                </div>
-
-                                {showOfferParams && (
-                                     <div className="space-y-3 md:col-span-2 animate-in slide-in-from-right-4">
-                                        {isSendOffer && selectedProduct && (
-                                          <p className="text-[11px] text-slate-500 leading-relaxed">
-                                            Amount ₹{Number(selectedProduct.min_amount).toLocaleString('en-IN')}–₹{Number(selectedProduct.max_amount).toLocaleString('en-IN')}
-                                            {' · '}
-                                            Tenure {selectedProduct.min_tenure_days}–{selectedProduct.max_tenure_days} days
-                                            {' · '}
-                                            Rate 0–{selectedProduct.max_interest_rate_daily}% / day
-                                            {loadingProducts ? ' · loading limits…' : ''}
-                                          </p>
-                                        )}
-
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">
-                                              {statusUpdate.status === 'recommended' ? 'Recommended Limit (₹)' : 'Approved Limit (₹)'}
-                                            </label>
-                                            <Input
-                                              type="number"
-                                              min={selectedProduct?.min_amount}
-                                              max={selectedProduct?.max_amount}
-                                              className="rounded-lg h-9 border-slate-200 bg-slate-50 text-sm font-mono"
-                                              value={statusUpdate.approvedAmount}
-                                              onChange={e => setStatusUpdate(p => ({...p, approvedAmount: e.target.value}))}
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Tenure (days)</label>
-                                            <Input
-                                              type="number"
-                                              min={selectedProduct?.min_tenure_days}
-                                              max={selectedProduct?.max_tenure_days}
-                                              className="rounded-lg h-9 border-slate-200 bg-slate-50 text-sm font-mono"
-                                              value={statusUpdate.tenureDays}
-                                              onChange={e => {
-                                                setTenureClampedFrom(null);
-                                                setStatusUpdate(p => ({...p, tenureDays: e.target.value}));
-                                              }}
-                                            />
-                                            {(() => {
-                                              if (!isSendOffer || !selectedProduct) return null;
-                                              const min = Number(selectedProduct.min_tenure_days);
-                                              const max = Number(selectedProduct.max_tenure_days);
-                                              const current = parseInt(statusUpdate.tenureDays, 10);
-                                              const outOfRange = Number.isFinite(current) && (current < min || current > max);
-                                              const flagged = tenureClampedFrom ?? (outOfRange ? current : null);
-                                              if (flagged == null) return null;
-                                              return (
-                                                <p className="text-[11px] leading-snug text-amber-700">
-                                                  Tenure {flagged}d is outside the allowed range ({min}–{max} days). Adjust the tenure.
+                                                    {showOfferParams && (
+                                     <div className="space-y-4 md:col-span-2 animate-in slide-in-from-right-4">
+                                        {/* Header explaining that CAM is the source of truth */}
+                                        <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-slate-900 text-white rounded-xl shadow-sm border border-slate-800">
+                                            <div className="space-y-0.5 min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                                                    <span className="text-xs font-semibold text-white tracking-wide">
+                                                        CAM Terms & Appraisal (Source of Truth)
+                                                    </span>
+                                                </div>
+                                                <p className="text-[11px] text-slate-300 leading-relaxed">
+                                                    Loan limit, tenure, daily rate, and platform fee are derived directly from the Credit Appraisal Memo (CAM).
                                                 </p>
-                                              );
-                                            })()}
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Interest Rate (% Daily)</label>
-                                            <Input
-                                              type="number"
-                                              step="0.01"
-                                              min={0}
-                                              max={selectedProduct?.max_interest_rate_daily}
-                                              className="rounded-lg h-9 border-slate-200 bg-slate-50 text-sm font-mono"
-                                              value={statusUpdate.interestRateDaily}
-                                              onChange={e => setStatusUpdate(p => ({...p, interestRateDaily: e.target.value}))}
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">
-                                              Next salary date
-                                            </label>
-                                            {(() => {
-                                              const profileSalary =
-                                                data?.profile?.next_salary_date ||
-                                                userData?.profile?.next_salary_date ||
-                                                userData?.next_salary_date ||
-                                                null;
-                                              const salaryLabel = profileSalary
-                                                ? new Date(profileSalary).toLocaleDateString('en-IN', {
-                                                    day: 'numeric',
-                                                    month: 'short',
-                                                    year: 'numeric',
-                                                  })
-                                                : 'Not set';
-                                              if (editingSalaryDate) {
-                                                return (
-                                                  <div className="flex items-center gap-1.5">
-                                                    <Input
-                                                      type="date"
-                                                      className="rounded-lg h-9 border-slate-200 bg-white text-sm font-mono flex-1"
-                                                      value={newSalaryDate}
-                                                      onChange={(e) => setNewSalaryDate(e.target.value)}
-                                                    />
-                                                    <Button
-                                                      type="button"
-                                                      size="sm"
-                                                      className="h-9 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px]"
-                                                      onClick={handleUpdateSalaryDate}
-                                                      disabled={updating || !newSalaryDate}
-                                                    >
-                                                      Save
-                                                    </Button>
-                                                    <Button
-                                                      type="button"
-                                                      size="sm"
-                                                      variant="ghost"
-                                                      className="h-9 px-2 text-[10px] text-slate-500"
-                                                      onClick={() => setEditingSalaryDate(false)}
-                                                    >
-                                                      Cancel
-                                                    </Button>
-                                                  </div>
-                                                );
-                                              }
-                                              return (
-                                                <div className="flex items-center gap-2 h-9 px-3 rounded-lg border border-slate-200 bg-slate-50">
-                                                  <span className="text-sm font-mono text-slate-800 flex-1 truncate">
-                                                    {salaryLabel}
-                                                  </span>
-                                                  {!isReadOnly && (
-                                                    <button
-                                                      type="button"
-                                                      className="text-[10px] font-semibold text-indigo-600 hover:underline uppercase tracking-wide shrink-0"
-                                                      onClick={() => {
-                                                        setEditingSalaryDate(true);
-                                                        setNewSalaryDate(
-                                                          profileSalary
-                                                            ? new Date(profileSalary).toISOString().split('T')[0]
-                                                            : ''
-                                                        );
-                                                      }}
-                                                    >
-                                                      Edit
-                                                    </button>
-                                                  )}
-                                                </div>
-                                              );
-                                            })()}
-                                            <p className="text-[10px] text-slate-400 leading-snug">
-                                              Correct if the customer entered the wrong payday.
-                                            </p>
-                                        </div>
-                                        </div>
-
-                                        {isSendOffer && offerFees.length > 0 && (
-                                          <div className="rounded-lg border border-slate-200 overflow-hidden">
-                                            <div className="bg-slate-100 px-3 py-2 text-[10px] font-medium text-slate-600 uppercase tracking-wide">
-                                              Fee structure (editable within min/max)
                                             </div>
-                                            <div className="divide-y divide-slate-100">
-                                              {offerFees.map((fee) => (
-                                                <div key={fee.fee_code} className="grid grid-cols-12 gap-2 items-center px-3 py-2 text-xs">
-                                                  <div className="col-span-5">
-                                                    <div className="font-medium text-slate-800">
-                                                      {fee.fee_code === 'process_fee' ? 'Platform Fee' : fee.fee_name}
-                                                    </div>
-                                                    <div className="text-[10px] text-slate-400 font-mono">{fee.fee_code}</div>
-                                                  </div>
-                                                  <div className="col-span-3 text-[10px] text-slate-500 text-center">
-                                                    {fee.min_value}% – {fee.max_value}%
-                                                  </div>
-                                                  <div className="col-span-4">
-                                                    <Input
-                                                      type="number"
-                                                      step="0.1"
-                                                      min={fee.min_value}
-                                                      max={fee.max_value}
-                                                      className="h-8 text-center text-sm font-mono border-slate-200"
-                                                      value={statusUpdate.feeBreakdown?.[fee.fee_code] ?? fee.default_value}
-                                                      onChange={(e) => updateFeePercent(fee.fee_code, e.target.value)}
-                                                    />
-                                                  </div>
-                                                </div>
-                                              ))}
-                                            </div>
-                                          </div>
-                                        )}
+                                            {setActiveTab && (
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => setActiveTab('cam')}
+                                                    className="h-8 px-3 text-xs bg-white/10 hover:bg-white/20 text-white border-white/20 shrink-0 font-medium"
+                                                >
+                                                    Edit in CAM
+                                                </Button>
+                                            )}
+                                        </div>
 
-                                        {statusUpdate.approvedAmount > 0 && (
-                                            (() => {
-                                                    const P = parseFloat(statusUpdate.approvedAmount || 0);
-                                                    const tenure = parseInt(statusUpdate.tenureDays || loanApp.tenure_days || 15, 10);
-                                                    const rate = parseFloat(statusUpdate.interestRateDaily || loanApp.applied_interest_rate_daily || 1);
-                                                    const totalInterest = (P * rate * tenure) / 100;
-                                                    const totalRepayment = P + totalInterest;
-                                                    // Matches the backend: today in IST + tenure days
-                                                    const istToday = new Date(Date.now() + 330 * 60 * 1000);
-                                                    const repaymentDate = Number.isFinite(tenure)
-                                                      ? new Date(Date.UTC(
-                                                          istToday.getUTCFullYear(),
-                                                          istToday.getUTCMonth(),
-                                                          istToday.getUTCDate() + tenure
-                                                        )).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })
-                                                      : '—';
-                                                    const money = (n) =>
-                                                      `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                                        {camParticulars && (camParticulars.loan_recommended || camParticulars.appraised_salary) ? (
+                                            <div className="space-y-3">
+                                                <ResultsStrip particulars={camParticulars} policy={camPolicy} />
 
-                                                    const feeRows = [];
-                                                    const feesSource = offerFees.length
-                                                      ? offerFees
-                                                      : filterActivatableProductFees(productDetails?.fees);
-                                                    if (feesSource?.length) {
-                                                        feesSource.forEach(fee => {
-                                                            let amount = 0;
-                                                            let label = fee.fee_code === 'process_fee' ? 'Platform Fee' : fee.fee_name;
-                                                            const override = statusUpdate.feeBreakdown?.[fee.fee_code];
-                                                            if (fee.fee_type === 'percentage') {
-                                                                const val = override != null ? parseFloat(override) : parseFloat(fee.default_value);
-                                                                amount = (P * val) / 100;
-                                                                label += ` (${val}%)`;
-                                                            } else {
-                                                                amount = override != null ? parseFloat(override) : parseFloat(fee.default_value);
-                                                            }
-                                                            if (amount > 0) feeRows.push({ label, amount });
-                                                        });
-                                                    } else {
-                                                        const pct = finiteNumber(statusUpdate.feeBreakdown?.process_fee);
-                                                        if (pct != null && pct > 0) {
-                                                            feeRows.push({ label: `Platform Fee (${pct}%)`, amount: (P * pct) / 100 });
-                                                        }
-                                                    }
-
-                                                    const subTotalFees = feeRows.reduce((sum, f) => sum + f.amount, 0);
-                                                    const gstAmount = subTotalFees * 0.18;
-                                                    const totalDeductions = subTotalFees + gstAmount;
-                                                    const disbursalAmount = P - totalDeductions;
-
-                                                    return (
-                                                      <div className="md:col-span-2 grid grid-cols-1 xl:grid-cols-2 gap-2">
-                                                        <DetailTable title="Loan breakdown preview" compact>
-                                                          <DetailRow label="Principal amount" mono compact align="right" labelWidth="w-[58%]">
-                                                            {money(P)}
-                                                          </DetailRow>
-                                                          {feeRows.map((f, idx) => (
-                                                            <DetailRow key={idx} label={f.label} mono compact align="right" labelWidth="w-[58%]">
-                                                              <span className="text-rose-700">− {money(f.amount)}</span>
-                                                            </DetailRow>
-                                                          ))}
-                                                          <DetailRow label="GST (18%)" mono compact align="right" labelWidth="w-[58%]">
-                                                            <span className="text-rose-700">− {money(gstAmount)}</span>
-                                                          </DetailRow>
-                                                          <DetailRow label="Total deductions" mono compact align="right" labelWidth="w-[58%]">
-                                                            <span className="text-rose-800">− {money(totalDeductions)}</span>
-                                                          </DetailRow>
-                                                          <DetailRow label="Net disbursal" mono compact align="right" labelWidth="w-[58%]">
-                                                            <span className="text-emerald-700">{money(disbursalAmount)}</span>
-                                                          </DetailRow>
-                                                        </DetailTable>
-
-                                                        <DetailTable title="Repayment sheet" compact>
-                                                          <DetailRow label="Tenure" mono compact align="right" labelWidth="w-[58%]">
-                                                            {`${tenure} days`}
-                                                          </DetailRow>
-                                                          <DetailRow label="Repayment date" mono compact align="right" labelWidth="w-[58%]">
-                                                            <span className="font-semibold text-slate-900">{repaymentDate}</span>
-                                                          </DetailRow>
-                                                          <DetailRow label="Daily interest" mono compact align="right" labelWidth="w-[58%]">
-                                                            {`${Number(rate).toFixed(3)}%`}
-                                                          </DetailRow>
-                                                          <DetailRow label={`Interest (${Number(rate).toFixed(3)}% × ${tenure}d)`} mono compact align="right" labelWidth="w-[58%]">
-                                                            <span className="text-slate-800">+ {money(totalInterest)}</span>
-                                                          </DetailRow>
-                                                          <DetailRow label="Total repayment" mono compact align="right" labelWidth="w-[58%]">
-                                                            <span className="text-[#222222]">{money(totalRepayment)}</span>
-                                                          </DetailRow>
-                                                          <DetailRow label="Note" compact emphasize={false} labelWidth="w-[58%]">
-                                                            <span className="text-[10px] font-normal text-slate-500 leading-snug">
-                                                              Principal + interest after disbursal. Fees deducted upfront from net disbursal.
+                                                {/* 4 Core CAM Areas Breakdown */}
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                    {/* 1. Salary Appraisal */}
+                                                    <div className="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
+                                                        <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                                                            <span className="text-[11px] font-bold text-slate-800">1. Salary Appraisal</span>
+                                                            <span className="text-[10px] text-slate-500 font-mono">
+                                                                Pay Date: {camParticulars.next_pay_date || '—'}
                                                             </span>
-                                                          </DetailRow>
-                                                        </DetailTable>
-                                                      </div>
-                                                    );
-                                            })()
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-2 text-xs">
+                                                            <div>
+                                                                <span className="text-[10px] text-slate-500 block">Appraised Salary</span>
+                                                                <span className="font-semibold text-slate-900 font-mono">
+                                                                    ₹{formatInr(camParticulars.appraised_salary)}
+                                                                </span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[10px] text-slate-500 block">Average Salary</span>
+                                                                <span className="font-medium text-slate-700 font-mono">
+                                                                    ₹{formatInr(camParticulars.avg_salary)}
+                                                                </span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[10px] text-slate-500 block">Method</span>
+                                                                <span className="font-medium text-slate-700 uppercase">
+                                                                    {camParticulars.appraisal_method || '—'}
+                                                                </span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[10px] text-slate-500 block">Variance / On-time</span>
+                                                                <span className="font-medium text-slate-700">
+                                                                    {camParticulars.salary_variance || '—'} / {camParticulars.salary_on_time || '—'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* 2. Affordability (FOIR) */}
+                                                    <div className="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
+                                                        <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                                                            <span className="text-[11px] font-bold text-slate-800">2. Affordability (FOIR)</span>
+                                                            <span className="text-[10px] text-slate-500">
+                                                                Eligible FOIR: {camParticulars.eligible_foir_pct ? `${camParticulars.eligible_foir_pct}%` : '—'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-2 text-xs">
+                                                            <div>
+                                                                <span className="text-[10px] text-slate-500 block">Eligible Loan</span>
+                                                                <span className="font-semibold text-emerald-700 font-mono">
+                                                                    ₹{formatInr(camParticulars.eligible_loan)}
+                                                                </span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[10px] text-slate-500 block">FOIR Income</span>
+                                                                <span className="font-medium text-slate-700 font-mono">
+                                                                    ₹{formatInr(camParticulars.foir_income)}
+                                                                </span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[10px] text-slate-500 block">Appraised Obligations</span>
+                                                                <span className="font-medium text-slate-700 font-mono">
+                                                                    {camParticulars.appraised_obligations ? `₹${formatInr(camParticulars.appraised_obligations)}` : '—'}
+                                                                </span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[10px] text-slate-500 block">Final FOIR</span>
+                                                                <span className="font-semibold text-slate-900">
+                                                                    {camParticulars.final_foir_pct ? `${camParticulars.final_foir_pct}%` : '—'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* 3. Loan Decision */}
+                                                    <div className="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
+                                                        <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                                                            <span className="text-[11px] font-bold text-slate-800">3. Loan Decision</span>
+                                                            <Badge variant="outline" className="text-[9px] font-semibold bg-emerald-50 text-emerald-700 border-emerald-200">
+                                                                {camParticulars.decision || 'APPROVE'}
+                                                            </Badge>
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-2 text-xs">
+                                                            <div>
+                                                                <span className="text-[10px] text-slate-500 block">Loan Recommended</span>
+                                                                <span className="font-bold text-slate-900 text-sm font-mono">
+                                                                    ₹{formatInr(camParticulars.loan_recommended)}
+                                                                </span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[10px] text-slate-500 block">Loan Applied</span>
+                                                                <span className="font-medium text-slate-700 font-mono">
+                                                                    ₹{formatInr(camParticulars.loan_applied || loanApp?.principal_amount)}
+                                                                </span>
+                                                            </div>
+                                                            <div className="col-span-2">
+                                                                <span className="text-[10px] text-slate-500 block">Recommendation Reason</span>
+                                                                <span className="font-medium text-slate-700 text-[11px]">
+                                                                    {camParticulars.recommendation_reason || camParticulars.decision_reason || 'Within FOIR and policy limits'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* 4. Fees & Repayment */}
+                                                    <div className="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
+                                                        <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                                                            <span className="text-[11px] font-bold text-slate-800">4. Fees & Repayment</span>
+                                                            <span className="text-[10px] text-indigo-700 font-semibold">
+                                                                ROI: {camParticulars.roi_pct ? `${camParticulars.roi_pct}%/day` : '1.0%/day'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-2 text-xs">
+                                                            <div>
+                                                                <span className="text-[10px] text-slate-500 block">Net Disbursal</span>
+                                                                <span className="font-bold text-emerald-700 font-mono">
+                                                                    ₹{formatInr(camParticulars.net_disb_amount)}
+                                                                </span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[10px] text-slate-500 block">Repay Amount</span>
+                                                                <span className="font-bold text-[#222222] font-mono">
+                                                                    ₹{formatInr(camParticulars.repay_amount)}
+                                                                </span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[10px] text-slate-500 block">Disbursal → Repay Date</span>
+                                                                <span className="font-medium text-slate-700 text-[11px]">
+                                                                    {camParticulars.disbursal_date || '—'} → {camParticulars.repay_date || '—'} ({camParticulars.tenure_days ? `${camParticulars.tenure_days}d` : '—'})
+                                                                </span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[10px] text-slate-500 block">Platform Fee + GST</span>
+                                                                <span className="font-medium text-slate-700 font-mono text-[11px]">
+                                                                    {camParticulars.admin_fee_pct ? `${camParticulars.admin_fee_pct}%` : '10%'} (₹{formatInr(camParticulars.net_admin_fee || camParticulars.admin_fee_with_gst)})
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="p-4 rounded-xl border border-amber-200 bg-amber-50 flex items-center justify-between gap-3">
+                                                <div className="flex items-center gap-3">
+                                                    <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+                                                    <div>
+                                                        <p className="text-xs font-semibold text-amber-900">CAM Appraisal has not run yet</p>
+                                                        <p className="text-[11px] text-amber-700">Please calculate and save the CAM appraisal before sending the offer.</p>
+                                                    </div>
+                                                </div>
+                                                {setActiveTab && (
+                                                    <Button type="button" size="sm" onClick={() => setActiveTab('cam')} className="bg-amber-600 hover:bg-amber-700 text-white text-xs shrink-0">
+                                                        Go to CAM Tab
+                                                    </Button>
+                                                )}
+                                            </div>
                                         )}
-                                    </div>
+                                     </div>
                                 )}
                             </div>
 

@@ -1041,7 +1041,7 @@ export default function CamTab() {
                   setStatusUpdate?.((prev) => {
                     const prevAmt = Number(String(prev.approvedAmount ?? '').replace(/,/g, ''));
                     const next = { ...prev, status: 'offer_sent' };
-                    if ((!Number.isFinite(prevAmt) || prevAmt <= 0) && Number.isFinite(camAmt) && camAmt > 0) {
+                    if (Number.isFinite(camAmt) && camAmt > 0) {
                       next.approvedAmount = camAmt;
                     }
                     if (Number.isFinite(camTenure) && camTenure > 0) {

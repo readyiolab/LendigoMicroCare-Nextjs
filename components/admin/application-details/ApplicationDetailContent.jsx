@@ -68,10 +68,17 @@ const PRIMARY_NAV_GROUPS = [
     ],
   },
   {
-    id: 'loan_history',
-    label: 'Loan History',
+    id: 'cam',
+    label: 'CAM',
     subtabs: [
-      { id: 'loan_history', label: 'Loan History' },
+      { id: 'cam', label: 'CAM' },
+    ],
+  },
+  {
+    id: 'actions',
+    label: 'Final Decision',
+    subtabs: [
+      { id: 'actions', label: 'Final Decision' },
     ],
   },
   {
@@ -86,13 +93,6 @@ const PRIMARY_NAV_GROUPS = [
     label: 'Video Declaration',
     subtabs: [
       { id: 'verification', label: 'Video Declaration' },
-    ],
-  },
-  {
-    id: 'cam',
-    label: 'CAM',
-    subtabs: [
-      { id: 'cam', label: 'CAM' },
     ],
   },
   {
@@ -128,19 +128,19 @@ const PRIMARY_NAV_GROUPS = [
     ],
   },
   {
+    id: 'loan_history',
+    label: 'Loan History',
+    subtabs: [
+      { id: 'loan_history', label: 'Loan History' },
+    ],
+  },
+  {
     id: 'activity',
     label: 'Activity',
     subtabs: [
       { id: 'call_logs', label: 'Call Logs' },
       { id: 'history', label: 'Activity Log' },
       { id: 'journey', label: 'Customer Journey' },
-    ],
-  },
-  {
-    id: 'actions',
-    label: 'Final Decision',
-    subtabs: [
-      { id: 'actions', label: 'Final Decision' },
     ],
   },
 ];
@@ -264,7 +264,7 @@ export default function ApplicationDetailContent() {
             setStatusUpdate?.((prev) => {
                 const prevAmt = Number(String(prev.approvedAmount ?? '').replace(/,/g, ''));
                 const next = { ...prev, status: 'offer_sent' };
-                if ((!Number.isFinite(prevAmt) || prevAmt <= 0) && Number.isFinite(camAmt) && camAmt > 0) {
+                if (Number.isFinite(camAmt) && camAmt > 0) {
                     next.approvedAmount = camAmt;
                 }
                 if (Number.isFinite(camTenure) && camTenure > 0) {
