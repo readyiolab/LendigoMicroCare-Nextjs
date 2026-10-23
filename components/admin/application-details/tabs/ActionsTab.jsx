@@ -203,11 +203,11 @@ export default function ActionsTab() {
     // but never force-reject when the case is already recommended, sanctioned, or offer sent.
     useEffect(() => {
         if (!breBlocksRecommend) return;
-        if (['recommended', 'approved', 'offer_sent'].includes(appStatus)) return;
+        if (alreadySanctioned || ['recommended', 'approved', 'offer_sent'].includes(appStatus)) return;
         if (['recommended', 'approved', 'offer_sent'].includes(statusUpdate.status)) {
             setStatusUpdate((p) => ({ ...p, status: 'rejected' }));
         }
-    }, [breBlocksRecommend, setStatusUpdate, statusUpdate.status, appStatus]);
+    }, [breBlocksRecommend, setStatusUpdate, statusUpdate.status, appStatus, alreadySanctioned]);
 
     const operationsNote = (() => {
         const s = loanApp?.application_status;

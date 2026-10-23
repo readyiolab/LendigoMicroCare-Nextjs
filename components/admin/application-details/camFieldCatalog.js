@@ -233,7 +233,12 @@ export function buildPrefillParticulars(loanApp, data) {
     loan_recommended: recommended,
     roi_pct: roi,
     tenure_days: tenure,
-    disbursal_date: istTodayISO(),
+    disbursal_date: pickStr(
+      app.disbursal_date,
+      data?.disbursement?.disbursal_date,
+      app.disbursed_at ? String(app.disbursed_at).slice(0, 10) : null,
+      istTodayISO()
+    ),
   });
 }
 
