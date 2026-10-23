@@ -139,7 +139,15 @@ export default function ActionsTab() {
             loanApp?.internal_status === 'offer_revision_requested' ||
             loanApp?.customer_status === 'offer_revision_requested');
     /** After UW sanction or a sent offer, Send offer stays available even if credit verdict is REJECT. */
-    const alreadySanctioned = appStatus === 'approved' || appStatus === 'offer_sent' || awaitingRevision;
+    const alreadySanctioned =
+        [
+            'approved',
+            'offer_sent',
+            'offer_accepted',
+            'video_declaration_pending',
+            'video_declaration_submitted',
+            'video_declaration_rejected',
+        ].includes(appStatus) || awaitingRevision;
 
     useEffect(() => {
         if (appStatus !== 'offer_sent' || !loanApp?.id) {
@@ -762,7 +770,12 @@ export default function ActionsTab() {
                                         className="w-full h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-300"
                                     >
                                         <option value="" disabled>Select outcome...</option>
-                                        {admin?.role === 'credit_manager' ? (
+                                        {alreadySanctioned ? (
+                                            <>
+                                                <option value="offer_sent">Send offer to customer</option>
+                                                <option value="rejected">Reject application</option>
+                                            </>
+                                        ) : admin?.role === 'credit_manager' ? (
                                             <>
                                                 <option value="under_review">Under Review</option>
                                                 <option value="pending_pd">Pending PD (personal discussion)</option>
@@ -771,7 +784,7 @@ export default function ActionsTab() {
                                                 )}
                                                 <option value="rejected">Reject application</option>
                                             </>
-                                        ) : ['underwriter', 'approver'].includes(String(admin?.role_code || admin?.role || '').toLowerCase()) && !alreadySanctioned ? (
+                                        ) : ['underwriter', 'approver'].includes(String(admin?.role_code || admin?.role || '').toLowerCase()) ? (
                                             <>
                                                 <option value="under_review">Under Review</option>
                                                 <option value="pending_pd">Pending PD (personal discussion)</option>
@@ -784,11 +797,6 @@ export default function ActionsTab() {
                                                 {!hidePositiveOutcomes && (
                                                     <option value="offer_sent">Send offer to customer</option>
                                                 )}
-                                                <option value="rejected">Reject application</option>
-                                            </>
-                                        ) : alreadySanctioned ? (
-                                            <>
-                                                <option value="offer_sent">Send offer to customer</option>
                                                 <option value="rejected">Reject application</option>
                                             </>
                                         ) : (
