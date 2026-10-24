@@ -1,12 +1,26 @@
-
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Clock, CheckCircle2, Mail, BadgeInfo, Save, FileText, RefreshCw, Download, AlertCircle, ShieldCheck, Sparkles, XCircle, RotateCw, ShieldBan, ChevronDown, ChevronUp, Info, ShieldAlert } from 'lucide-react';
+import {
+    Clock,
+    CheckCircle2,
+    Mail,
+    Save,
+    FileText,
+    RefreshCw,
+    AlertCircle,
+    ShieldCheck,
+    XCircle,
+    ShieldBan,
+    ChevronDown,
+    ChevronUp,
+    Info,
+    ShieldAlert,
+    ExternalLink,
+    AlertTriangle,
+    ArrowRight
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
-import { Spinner } from '@/components/ui/spinner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useApplicationContext } from '@/components/admin/application-details/context/ApplicationContext';
@@ -104,58 +118,6 @@ function pickLimitProduct(products, preferredId) {
     );
 }
 
-function ResultsStrip({ particulars, policy }) {
-  const tenureManual = particulars?.tenure_days_override === 'YES';
-  const chips = [
-    { label: 'Recommended', value: formatInr(particulars?.loan_recommended) },
-    { label: 'Eligible loan', value: formatInr(particulars?.eligible_loan) },
-    {
-      label: tenureManual ? 'Tenure · Manual' : 'Tenure',
-      value: particulars?.tenure_days ? `${particulars.tenure_days}d` : '—',
-    },
-    { label: 'Net disb.', value: formatInr(particulars?.net_disb_amount) },
-    { label: 'Repay', value: formatInr(particulars?.repay_amount) },
-    { label: 'Final FOIR', value: particulars?.final_foir_pct ? `${particulars.final_foir_pct}%` : '—' },
-    { label: 'Risk', value: particulars?.risk_profile || '—', strong: true },
-    { label: 'Decision', value: particulars?.decision || '—', strong: true },
-  ];
-  return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-3 text-white shadow-md">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-bold uppercase tracking-wide text-slate-300">CAM result summary</p>
-        {policy?.product_max != null && (
-          <p className="text-[11px] text-slate-400">
-            Product max ₹{formatInr(policy.product_max)}
-            {policy.customer_max ? ` · Customer max ₹${formatInr(policy.customer_max)}` : ''}
-            {policy.config_version ? ` · ${policy.config_version}` : ''}
-          </p>
-        )}
-      </div>
-      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 lg:grid-cols-8">
-        {chips.map((c) => (
-          <div
-            key={c.label}
-            className={`rounded-lg px-2 py-1.5 ${
-              c.strong ? 'bg-white/20 ring-1 ring-white/30' : 'bg-white/10'
-            }`}
-          >
-            <p className="text-[10px] uppercase tracking-wide text-slate-400">{c.label}</p>
-            <p className={`tabular-nums text-white ${c.strong ? 'text-base font-bold' : 'text-sm font-semibold'}`}>
-              {c.value}
-            </p>
-          </div>
-        ))}
-      </div>
-      {particulars?.recommendation_reason && (
-        <p className="mt-2 text-[11px] text-slate-300">Cap used: {particulars.recommendation_reason}</p>
-      )}
-      {particulars?.decision_reason && (
-        <p className="text-[11px] text-slate-300">Decision: {particulars.decision_reason}</p>
-      )}
-    </div>
-  );
-}
-
 export default function ActionsTab() {
     const { 
         loanApp, applicationId, admin, statusUpdate, setStatusUpdate, handleStatusUpdate, 
@@ -168,6 +130,19 @@ export default function ActionsTab() {
         handleUpdateSalaryDate,
     } = useApplicationContext();
 
+    const roleCode = String(admin?.role_code || admin?.role || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_|_$/g, '');
+
+    const canManagePayoutCases = [
+        'super_admin',
+        'org_admin',
+        'admin',
+        'underwriter',
+        'approver',
+    ].includes(roleCode);
+
     const gates = computeStaffVerificationGates({
         userData,
         kycDetails: kyc_details,
@@ -177,6 +152,7 @@ export default function ActionsTab() {
         latestCreditRun: creditDecisionResult,
         panVerification: data?.pan_verification,
     });
+
     const pendingGates = getRecommendBlockers(gates);
     const allPrerequisitesMet = gates.complete;
     const needsGatesForStatus = ['recommended', 'approved', 'offer_sent'].includes(statusUpdate.status);
@@ -185,12 +161,14 @@ export default function ActionsTab() {
     const appStatus = String(loanApp?.application_status || '').toLowerCase();
     const [revisionInfo, setRevisionInfo] = useState(null);
     const pendingRevision = revisionInfo?.pending || null;
+
     /** Customer asked for changes on a sent offer: staff re-send a revised offer from this tab. */
     const awaitingRevision =
         appStatus === 'offer_sent' &&
         (!!pendingRevision ||
             loanApp?.internal_status === 'offer_revision_requested' ||
             loanApp?.customer_status === 'offer_revision_requested');
+
     /** After UW sanction or a sent offer, Send offer stays available even if credit verdict is REJECT. */
     const alreadySanctioned =
         [
@@ -221,6 +199,7 @@ export default function ActionsTab() {
             cancelled = true;
         };
     }, [appStatus, loanApp?.id, loanApp?.internal_status]);
+
     const hidePositiveOutcomes = breBlocksRecommend && !alreadySanctioned;
     const skipGatesForSanctionedOffer =
         alreadySanctioned && statusUpdate.status === 'offer_sent';
@@ -252,8 +231,7 @@ export default function ActionsTab() {
         setStatusUpdate((p) => ({ ...p, status: 'offer_sent' }));
     }, [alreadySanctioned, isReadOnly, setStatusUpdate, statusUpdate.status]);
 
-    // Clear recommend/approve if BRE rejects while that status is selected —
-    // but never force-reject when the case is already recommended, sanctioned, or offer sent.
+    // Clear recommend/approve if BRE rejects while that status is selected
     useEffect(() => {
         if (!breBlocksRecommend) return;
         if (alreadySanctioned || ['recommended', 'approved', 'offer_sent'].includes(appStatus)) return;
@@ -262,46 +240,27 @@ export default function ActionsTab() {
         }
     }, [breBlocksRecommend, setStatusUpdate, statusUpdate.status, appStatus, alreadySanctioned]);
 
-    const operationsNote = (() => {
-        const s = loanApp?.application_status;
-        if (s === 'under_review') {
-            return loanApp.bre_review_reason || 'System flagged for manual review.';
-        }
-        if (s === 'offer_sent' && awaitingRevision) {
-            return 'Customer requested changes to the offer. Review the request below, adjust the terms and re-send the offer.';
-        }
-        if (s === 'offer_sent') {
-            return 'Offer email sent. Customer must accept on their loan dashboard before e-sign.';
-        }
-        if (s === 'recommended') {
-            return 'Credit recommended this case. Approve & issue LAN on CAM, then continue to send offer.';
-        }
-        if (s === 'approved') {
-            return 'Sanctioned. Confirm the CAM amount, tenure and platform fee, then send the offer to the customer.';
-        }
-        if (s === 'offer_rejected') {
-            return 'Customer declined the offer. You can adjust the terms and send a new offer below.';
-        }
-        if (s === 'rejected') {
-            return 'Application closed. See History tab for reason.';
-        }
-        if (['esign_completed', 'mandate_pending', 'disbursed', 'closed'].includes(s)) {
-            return 'Later-stage workflow — use the relevant tab (E-sign, Disbursement, etc.).';
-        }
-        return 'Use the tabs above to complete verification, then save your decision below.';
-    })();
-
     // Blacklist state
     const [showBlacklistDialog, setShowBlacklistDialog] = useState(false);
     const [blacklistReason, setBlacklistReason] = useState('');
     const [blacklisting, setBlacklisting] = useState(false);
-    const [showWorkflowGuide, setShowWorkflowGuide] = useState(false);
     const [showOverrideDialog, setShowOverrideDialog] = useState(false);
     const [showRejectDialog, setShowRejectDialog] = useState(false);
+    const [payoutDialogAction, setPayoutDialogAction] = useState(null);
+    const [payoutActionReason, setPayoutActionReason] = useState('');
+    const [payoutActionBusy, setPayoutActionBusy] = useState(false);
+    const [payoutActionError, setPayoutActionError] = useState('');
+    const [payoutActionMessage, setPayoutActionMessage] = useState('');
+    const [payoutHeldOverride, setPayoutHeldOverride] = useState(null);
+    const [accountTeamVerified, setAccountTeamVerified] = useState(false);
     const [activeProducts, setActiveProducts] = useState(() => getCachedOfferProducts() || []);
     const [loadingProducts, setLoadingProducts] = useState(() => !getCachedOfferProducts());
     const offerSeedKeyRef = useRef('');
     const [tenureClampedFrom, setTenureClampedFrom] = useState(null);
+
+    // Collapsible states
+    const [advancedOpen, setAdvancedOpen] = useState(false);
+    const [dangerOpen, setDangerOpen] = useState(false);
 
     // Load CAM particulars directly so ActionsTab is always in sync with CAM
     const [camData, setCamData] = useState(null);
@@ -351,18 +310,58 @@ export default function ActionsTab() {
         });
     }, [camParticulars, setStatusUpdate]);
 
-    const showOfferParams = ['offer_sent', 'approved', 'recommended'].includes(statusUpdate.status);
+    const payoutHeldFromServer = loanApp?.payout_hold === true ||
+        Number(loanApp?.payout_hold ?? loanApp?.payoutHold) === 1;
+    const payoutHeld = payoutHeldOverride ?? payoutHeldFromServer;
+
+    useEffect(() => {
+        setPayoutHeldOverride(null);
+        setPayoutActionError('');
+        setPayoutActionMessage('');
+    }, [loanApp?.id]);
+
+    const submitPayoutAction = async () => {
+        const reason = payoutActionReason.trim();
+        if (!payoutDialogAction || reason.length < 3) {
+            setPayoutActionError('Please enter a reason (at least 3 characters).');
+            return;
+        }
+        if (payoutDialogAction === 'reject' && roleCode === 'super_admin' && !accountTeamVerified) {
+            setPayoutActionError('Confirm that the account team verified this case is not paid and is no longer processing.');
+            return;
+        }
+
+        setPayoutActionBusy(true);
+        setPayoutActionError('');
+        setPayoutActionMessage('');
+        try {
+            await adminAPI.updateDisbursalPayoutCase(loanApp.id, {
+                action: payoutDialogAction,
+                reason,
+                accountTeamVerified: payoutDialogAction === 'reject' && roleCode === 'super_admin' && accountTeamVerified,
+            });
+            setPayoutHeldOverride(payoutDialogAction === 'hold');
+            setPayoutActionMessage(
+                payoutDialogAction === 'hold'
+                    ? 'Case placed on hold.'
+                    : payoutDialogAction === 'release'
+                        ? 'Hold released. Case is back in payout-ready.'
+                        : 'Case cancelled as a customer withdrawal.'
+            );
+            setPayoutDialogAction(null);
+            setPayoutActionReason('');
+            setAccountTeamVerified(false);
+            await fetchApplication(true);
+        } catch (err) {
+            setPayoutActionError(
+                err?.response?.data?.message || err.message || 'Could not update payout case.'
+            );
+        } finally {
+            setPayoutActionBusy(false);
+        }
+    };
+
     const isSendOffer = statusUpdate.status === 'offer_sent';
-
-    const selectedProduct = useMemo(() => {
-        if (!statusUpdate.productId) return null;
-        return activeProducts.find((p) => String(p.id) === String(statusUpdate.productId)) || null;
-    }, [activeProducts, statusUpdate.productId]);
-
-    const offerFees = useMemo(
-        () => filterActivatableProductFees(selectedProduct?.fees),
-        [selectedProduct]
-    );
 
     useEffect(() => {
         if (!isSendOffer) {
@@ -399,7 +398,6 @@ export default function ActionsTab() {
     }, []);
 
     // Seed amount, tenure and the CAM platform fee once when products load for Send offer.
-    // The loan product supplies min/max limits only. It does not replace the CAM fee %.
     useEffect(() => {
         if (!isSendOffer || !activeProducts.length) return;
         const seedKey = `offer:${applicationId || loanApp?.id || ''}:${activeProducts.map((p) => p.id).join(',')}`;
@@ -500,15 +498,6 @@ export default function ActionsTab() {
         };
     }, [isSendOffer, activeProducts, loanApp, applicationId, setStatusUpdate, statusUpdate.productId, statusUpdate.approvedAmount, statusUpdate.tenureDays, statusUpdate.interestRateDaily]);
 
-    const updateFeePercent = (feeCode, value) => {
-        setStatusUpdate((p) => ({
-            ...p,
-            feeBreakdown: { ...(p.feeBreakdown || {}), [feeCode]: parseFloat(value) || 0 },
-        }));
-    };
-
-    // A failed save is reported at the top of the page too, but staff are down here at the button.
-    // Holds the submit time; only an error from that save (within the window) scrolls.
     const SUBMIT_ERROR_SCROLL_WINDOW_MS = 30000;
     const submitAttemptedAtRef = useRef(0);
     useEffect(() => {
@@ -520,7 +509,7 @@ export default function ActionsTab() {
             document.getElementById('decision-result')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         });
     }, [error]);
-    // Declared after the error effect: a failed save sets error and ends updating in the same render
+
     useEffect(() => {
         if (!updating) submitAttemptedAtRef.current = 0;
     }, [updating]);
@@ -593,671 +582,979 @@ export default function ActionsTab() {
         }
     };
 
-    return (
-        <>
-        <div id="actions-form" className="grid grid-cols-1 lg:grid-cols-12 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    // Primary action label computation
+    const primaryActionText = useMemo(() => {
+        if (awaitingRevision) return 'Revise & Re-send Offer';
+        if (appStatus === 'offer_sent') return 'Re-send Offer';
+        if (alreadySanctioned) return 'Send Offer to Customer';
+        if (breBlocksRecommend) return 'Reject Application';
+        if (appStatus === 'recommended') return 'Underwriter Sanction Pending';
+        if (!gates.complete) return 'Complete Verification Gates';
+        return 'Ready for Recommendation';
+    }, [awaitingRevision, appStatus, alreadySanctioned, breBlocksRecommend, gates.complete]);
 
-            {/* Workflow guide */}
-            <div className="lg:col-span-12">
-                <button
-                    type="button"
-                    onClick={() => setShowWorkflowGuide((v) => !v)}
-                    className="w-full flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-left hover:bg-slate-100 transition-colors"
-                >
-                    <span className="flex items-center gap-2 text-xs font-medium text-slate-700">
-                        <Info className="w-4 h-4 text-indigo-500" />
-                        How loan decisions work (step-by-step)
-                    </span>
-                    {showWorkflowGuide ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
-                </button>
-                {showWorkflowGuide && (
-                    <ol className="mt-2 rounded-lg border border-slate-100 bg-white px-4 py-3 space-y-1.5 list-decimal list-inside text-xs text-slate-600 leading-relaxed">
-                        {WORKFLOW_STEPS.map((step, i) => (
-                            <li key={i}>{step}</li>
-                        ))}
-                    </ol>
-                )}
-            </div>
-            
-            {/* Left Column: Gates & Alerts — stays put; right column scrolls */}
-            <div className="lg:col-span-12 xl:col-span-4 space-y-3 xl:sticky xl:top-4 xl:self-start xl:z-10">
-                <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
-                    <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Checklist to Approve</h3>
-                        <Badge variant="outline" className={cn("text-[9px] border-none font-medium uppercase px-2 py-0.5", allPrerequisitesMet ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600")}>
-                            {allPrerequisitesMet ? 'All complete' : 'Pending'}
-                        </Badge>
+    // Structured KYC Verification Table items
+    const kycTableRows = [
+        {
+            key: 'aadhaar',
+            name: 'Aadhaar Verification',
+            status: gates.ekycOk ? 'Verified' : 'Pending',
+            isOk: gates.ekycOk,
+            actionLabel: gates.ekycOk ? 'View' : 'Verify',
+            actionTab: 'kyc',
+        },
+        {
+            key: 'pan',
+            name: 'PAN Verification',
+            status: gates.panOk ? 'Verified' : 'Pending',
+            isOk: gates.panOk,
+            actionLabel: gates.panOk ? 'View' : 'Verify',
+            actionTab: 'kyc',
+        },
+        {
+            key: 'bank',
+            name: 'Bank Account Check',
+            status: gates.bankOk ? 'Verified' : 'Pending',
+            isOk: gates.bankOk,
+            actionLabel: gates.bankOk ? 'View' : 'Verify',
+            actionTab: 'kyc',
+        },
+        {
+            key: 'selfie',
+            name: 'Selfie & Liveness',
+            status: gates.selfieOk ? 'Verified' : 'Pending',
+            isOk: gates.selfieOk,
+            actionLabel: gates.selfieOk ? 'View' : 'Verify',
+            actionTab: 'kyc',
+        },
+        {
+            key: 'risk_rules',
+            name: 'KYC Risk Rules',
+            status: gates.breOk ? 'Completed' : 'Not Run',
+            isOk: gates.breOk,
+            actionLabel: gates.breOk ? 'View Results' : 'Run Rules',
+            actionTab: 'bre',
+            isCustomAction: !gates.breOk,
+        },
+    ];
+
+    // Readonly / Completed State Banner
+    const isCompletedOrPayout = isReadOnly || ['esign_completed', 'mandate_pending', 'payment_pending', 'disbursed', 'closed'].includes(appStatus);
+
+    return (
+        <div id="actions-form" className="w-full space-y-6 max-w-7xl mx-auto pb-12 animate-in fade-in duration-300">
+
+            {/* ========================================================================= */}
+            {/* 1. APPLICATION HEADER & CURRENT STATUS */}
+            {/* ========================================================================= */}
+            <div className="bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                {loanApp?.lead_id || applicationId || `APP-${loanApp?.id || '—'}`}
+                            </span>
+                            <span className="text-slate-300">•</span>
+                            <h2 className="text-base font-semibold text-slate-900 tracking-tight">
+                                {userData?.full_name || 'Customer'}
+                            </h2>
+                            <Badge 
+                                variant="outline" 
+                                className={cn(
+                                    "text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 border",
+                                    appStatus === 'approved' || appStatus === 'disbursed'
+                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                        : appStatus === 'rejected'
+                                        ? "bg-rose-50 text-rose-700 border-rose-200"
+                                        : appStatus === 'offer_sent'
+                                        ? "bg-blue-50 text-blue-700 border-blue-200"
+                                        : "bg-amber-50 text-amber-700 border-amber-200"
+                                )}
+                            >
+                                {appStatus.replace(/_/g, ' ')}
+                            </Badge>
+                        </div>
+                        <p className="text-xs text-slate-500">
+                            Mobile: <span className="font-medium text-slate-700">{userData?.mobile || userData?.profile?.mobile || '—'}</span>
+                            {' · '}
+                            PAN: <span className="font-medium text-slate-700 uppercase">{userData?.profile?.pancard || userData?.pancard || '—'}</span>
+                        </p>
                     </div>
 
-                    {breBlocksRecommend && (
-                        <div className="mb-3 p-2.5 rounded-lg bg-rose-50 border border-rose-100 text-[11px] text-rose-800 flex items-start gap-2">
-                            <XCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                            <span>
-                                BRE says not eligible — <strong>Recommend is blocked</strong>. Choose Reject
-                                application (or ask Super Admin to override).
+                    <div className="flex flex-wrap items-center gap-4 lg:gap-6 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+                        <div className="text-left lg:text-right">
+                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">Applied</span>
+                            <span className="text-sm font-bold text-slate-800 font-mono">
+                                ₹{formatInr(camParticulars?.loan_applied || loanApp?.principal_amount || loanApp?.applied_amount || 0)}
                             </span>
                         </div>
-                    )}
-
-                    {allPrerequisitesMet && !breBlocksRecommend && (
-                        <div className="mb-3 p-2.5 rounded-lg bg-emerald-50 border border-emerald-100 text-[11px] text-emerald-800 flex items-center gap-2">
-                            <CheckCircle2 className="w-4 h-4 shrink-0" />
-                            {breSuggestsRecommend
-                                ? 'BRE suggests approval — you may recommend, approve, or send offer.'
-                                : 'All checks complete — you may recommend, approve, or send offer.'}
+                        <div className="text-left lg:text-right">
+                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">Recommended</span>
+                            <span className="text-sm font-bold text-indigo-700 font-mono">
+                                ₹{formatInr(camParticulars?.loan_recommended || loanApp?.recommended_loan_amount || loanApp?.approved_amount || 0)}
+                            </span>
                         </div>
-                    )}
-                    
-                    <div className="space-y-2">
-                        {STAFF_GATE_ITEMS.map((item) => {
-                            const done = gates[item.key];
-                            return (
-                                <div key={item.key} className="flex items-start justify-between gap-2 p-2.5 bg-slate-50 rounded-lg border border-slate-100">
-                                    <div className="min-w-0">
-                                        <span className="text-[11px] font-normal text-slate-600 block">{item.label}</span>
-                                        {!done && (
-                                            <span className="text-[10px] text-amber-700 mt-1 block leading-relaxed">{item.hint}</span>
-                                        )}
-                                        {done && item.key === 'creditCheckOk' && creditDecisionResult?.finalVerdict && (
-                                            <span className="text-[10px] text-emerald-700 mt-1 block leading-relaxed">
-                                                {verdictLabel(creditDecisionResult.finalVerdict)}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-2 shrink-0">
-                                        {!done && setActiveTab && item.tab && (
-                                            <button
-                                                type="button"
-                                                onClick={() => setActiveTab(item.tab)}
-                                                className="text-[8px] text-indigo-600 font-semibold hover:underline uppercase tracking-wide"
-                                            >
-                                                Open
-                                            </button>
-                                        )}
-                                        {done ? (
-                                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                                        ) : (
-                                            <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
-                                        )}
-                                    </div>
-                                </div>
-                            );
-                        })}
+                        <div className="pl-2 border-l border-slate-200 hidden sm:block">
+                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">Next Step</span>
+                            <span className="text-xs font-semibold text-slate-900 flex items-center gap-1.5 mt-0.5">
+                                <ArrowRight className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                                {primaryActionText}
+                            </span>
+                        </div>
                     </div>
-
-                    {needsGatesForStatus && pendingGates.length > 0 && !skipGatesForSanctionedOffer && !['super_admin', 'org_admin'].includes(String(admin?.role_code || admin?.role || '').toLowerCase()) && (
-                        <div className="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-100 text-[10px] text-amber-900 leading-relaxed">
-                            <p className="font-semibold uppercase tracking-wide text-[9px] mb-1">Before you can save this decision</p>
-                            <p>Complete {pendingGates.length} pending step{pendingGates.length > 1 ? 's' : ''}: {pendingGates.map((g) => g.label).join(', ')}.</p>
-                        </div>
-                    )}
-
-                    {(error || message) && (
-                        <div className={cn("mt-6 p-3 rounded-lg text-[11px] font-normal border leading-relaxed", error ? "bg-red-50 border-red-100 text-red-700" : "bg-emerald-50 border-emerald-100 text-emerald-600")}>
-                            {error || message}
-                        </div>
-                    )}
                 </div>
-
-                <div className="p-4 bg-slate-900 rounded-lg text-white">
-                     <p className="text-[10px] font-medium uppercase tracking-wide opacity-50 mb-2">Operations Note</p>
-                     <p className="text-xs font-normal leading-relaxed opacity-80">
-                        {operationsNote}
-                     </p>
-                </div>
-
-                {/* Blacklist Customer Button */}
-                {!['rejected', 'closed', 'cancelled'].includes(loanApp.application_status) && (
-                    <div className="p-4 bg-red-50 border border-red-100 rounded-lg space-y-2">
-                        <div className="flex items-center gap-2">
-                            <ShieldBan className="w-4 h-4 text-red-500" />
-                            <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-red-700">Blacklist Customer</p>
-                        </div>
-                        <p className="text-[10px] text-red-600 font-normal leading-relaxed">
-                            This will permanently block this customer's PAN & mobile from future applications. {!['disbursed', 'defaulted', 'closed'].includes(loanApp.application_status) ? 'The current application will be auto-rejected.' : 'The active/disbursed loan status will not be affected.'}
-                        </p>
-                        <Button 
-                            variant="destructive" 
-                            size="sm" 
-                            className="w-full rounded-lg h-9 text-[10px] uppercase tracking-widest font-medium bg-red-600 hover:bg-red-700 shadow-lg shadow-red-200"
-                            onClick={() => setShowBlacklistDialog(true)}
-                        >
-                            <ShieldBan className="w-3 h-3 mr-2" /> Blacklist This Customer
-                        </Button>
-                    </div>
-                )}
             </div>
 
-            {/* Right Column: Decisions & CAM */}
-            <div className="lg:col-span-12 xl:col-span-8">
-                {isReadOnly || ['esign_completed', 'mandate_pending', 'payment_pending'].includes(loanApp.application_status) ? (
-                    <div className="bg-emerald-50/50 border border-emerald-100 p-8 rounded-lg flex flex-col items-center text-center">
-                        <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-4" />
-                        <h4 className="text-sm font-medium text-emerald-900 uppercase tracking-widest mb-2">
-                            {loanApp.application_status.replace(/_/g, ' ')}
-                        </h4>
-                        <p className="text-xs text-emerald-700 font-normal max-w-md leading-relaxed">
-                            This step is complete. Manual status changes are locked to protect the audit trail.
-                        </p>
-                        {loanApp.application_status === 'esign_completed' && (
-                            <Button onClick={() => setActiveTab('disbursement')} className="mt-6 rounded-lg bg-emerald-600">
-                                Go to Payout
-                            </Button>
-                        )}
+            {/* Read-Only / Payout Active Notification */}
+            {isCompletedOrPayout && (
+                <div className="bg-slate-50 rounded-xl border border-slate-200 p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                        <div>
+                            <p className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                                Application Stage: {appStatus.replace(/_/g, ' ')}
+                            </p>
+                            <p className="text-xs text-slate-600 mt-0.5">
+                                Decision workflow is locked to preserve compliance and audit trails.
+                            </p>
+                        </div>
                     </div>
-                ) : (
-                    <div className="bg-white rounded-lg border border-slate-200 p-5 shadow-sm space-y-5">
-                        
-                        {!gates.breOk && (
-                             <div className="flex items-center justify-between p-4 bg-indigo-50 border border-indigo-100 rounded-lg">
-                                <div className="flex items-center gap-3">
-                                    <FileText className="w-5 h-5 text-indigo-500" />
-                                    <div>
-                                        <p className="text-xs font-medium text-indigo-900">KYC risk checklist has not run</p>
-                                        <p className="text-[10px] text-indigo-600">
-                                            Runs after PAN, Aadhaar, bank, and selfie — or generate now. This is not the CRIF/AA credit check.
-                                        </p>
-                                    </div>
-                                </div>
-                                <Button size="sm" className="rounded-lg h-8 bg-indigo-600" onClick={handleTriggerEvaluation} disabled={loadingBRE}>
-                                    {loadingBRE ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'GENERATE'}
-                                </Button>
-                             </div>
-                        )}
+                    {appStatus === 'payment_pending' && canManagePayoutCases && (
+                        <div className="flex items-center gap-2">
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                    setPayoutActionError('');
+                                    setAccountTeamVerified(false);
+                                    setPayoutDialogAction(payoutHeld ? 'release' : 'hold');
+                                }}
+                                className="h-8 text-xs font-semibold"
+                            >
+                                {payoutHeld ? 'Release Hold' : 'Place On Hold'}
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 text-xs font-semibold border-rose-200 text-rose-700 hover:bg-rose-50"
+                                onClick={() => {
+                                    setPayoutActionError('');
+                                    setAccountTeamVerified(false);
+                                    setPayoutDialogAction('reject');
+                                }}
+                            >
+                                Reject Payout
+                            </Button>
+                        </div>
+                    )}
+                    {appStatus === 'esign_completed' && (
+                        <Button onClick={() => setActiveTab?.('disbursement')} className="h-8 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white">
+                            Go to Payout
+                        </Button>
+                    )}
+                </div>
+            )}
 
-                        {(creditDecisionResult?.awaitingAaConsent ||
-                            String(creditDecisionResult?.finalVerdict || '').toUpperCase() ===
-                                'AWAITING_AA_CONSENT') && (
-                            <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-100 rounded-lg">
-                                <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                                <div>
-                                    <p className="text-xs font-medium text-amber-900">
-                                        Credit check is waiting for bank (AA) consent
-                                    </p>
-                                    <p className="text-[10px] text-amber-800 mt-0.5 leading-relaxed">
-                                        Share the Digitap bank link, then resume credit check before Recommend.
-                                        Recommend stays blocked until the credit check finishes.
-                                    </p>
-                                </div>
-                            </div>
-                        )}
+            {/* ========================================================================= */}
+            {/* 2. KYC VERIFICATION — STRUCTURED TABLE */}
+            {/* ========================================================================= */}
+            <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <div>
+                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">KYC Verification</h3>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                            Customer identity, document verification, and fraud rules.
+                        </p>
+                    </div>
+                    <Badge variant="outline" className={cn("text-[10px] font-bold uppercase px-2.5 py-0.5 border", allPrerequisitesMet ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-amber-50 text-amber-700 border-amber-200")}>
+                        {allPrerequisitesMet ? 'All Verified' : `${pendingGates.length} Pending`}
+                    </Badge>
+                </div>
 
-                        {awaitingRevision && (
-                            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-3">
-                                <div className="flex items-start gap-3">
-                                    <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                                    <div className="space-y-0.5">
-                                        <p className="text-xs font-medium text-amber-900">Customer requested changes to the offer</p>
-                                        <p className="text-[10px] text-amber-800 leading-relaxed">
-                                            Accept is paused for the customer until you re-send the offer.
-                                            {revisionInfo && ` Request ${revisionInfo.used} of ${revisionInfo.maxRequests}.`}
-                                            {pendingRevision?.createdAt &&
-                                                ` Sent ${new Date(pendingRevision.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}.`}
-                                        </p>
-                                    </div>
-                                </div>
-                                {pendingRevision ? (
-                                    <>
-                                        <DetailTable title="Requested vs offered" compact>
-                                            <DetailRow label="Amount" compact>
-                                                {pendingRevision.requestedAmount != null
-                                                    ? `₹${Number(pendingRevision.requestedAmount).toLocaleString('en-IN')} (offered ₹${Number(pendingRevision.offerSnapshot?.approved_amount ?? loanApp?.approved_amount ?? 0).toLocaleString('en-IN')})`
-                                                    : 'No change'}
-                                            </DetailRow>
-                                            <DetailRow label="Tenure" compact>
-                                                {pendingRevision.requestedTenureDays != null
-                                                    ? `${pendingRevision.requestedTenureDays} days${pendingRevision.requestedRepaymentDate ? ` · repay by ${new Date(`${pendingRevision.requestedRepaymentDate}T00:00:00Z`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })}` : ''} (offered ${pendingRevision.offerSnapshot?.tenure_days ?? loanApp?.tenure_days ?? '—'} days)`
-                                                    : 'No change'}
-                                            </DetailRow>
-                                            <DetailRow label="Customer note" compact>
-                                                {pendingRevision.customerNote || '—'}
-                                            </DetailRow>
-                                        </DetailTable>
-                                        {(pendingRevision.requestedAmount != null || pendingRevision.requestedTenureDays != null) && (
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="border-b border-slate-100 bg-slate-50/30 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                                <th className="py-2.5 px-5">Verification</th>
+                                <th className="py-2.5 px-5">Status</th>
+                                <th className="py-2.5 px-5 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                            {kycTableRows.map((row) => (
+                                <tr key={row.key} className="hover:bg-slate-50/50 transition-colors">
+                                    <td className="py-3 px-5 font-medium text-slate-800">
+                                        {row.name}
+                                    </td>
+                                    <td className="py-3 px-5">
+                                        <span className={cn(
+                                            "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold",
+                                            row.isOk
+                                                ? "bg-emerald-50 text-emerald-700"
+                                                : "bg-amber-50 text-amber-700"
+                                        )}>
+                                            {row.isOk ? (
+                                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                            ) : (
+                                                <Clock className="w-3.5 h-3.5 text-amber-600" />
+                                            )}
+                                            {row.status}
+                                        </span>
+                                    </td>
+                                    <td className="py-3 px-5 text-right">
+                                        {row.isCustomAction ? (
                                             <Button
-                                                type="button"
                                                 size="sm"
                                                 variant="outline"
-                                                className="rounded-lg h-8 text-xs border-amber-300 text-amber-900 hover:bg-amber-100"
-                                                onClick={() => {
-                                                    let tenure = pendingRevision.requestedTenureDays;
-                                                    if (pendingRevision.requestedRepaymentDate) {
-                                                        const istToday = new Date(Date.now() + 330 * 60 * 1000).toISOString().slice(0, 10);
-                                                        const days = Math.round(
-                                                            (Date.parse(`${pendingRevision.requestedRepaymentDate}T00:00:00Z`) -
-                                                                Date.parse(`${istToday}T00:00:00Z`)) /
-                                                                (24 * 60 * 60 * 1000)
-                                                        );
-                                                        if (days > 0) tenure = days;
-                                                    }
-                                                    setTenureClampedFrom(null);
-                                                    setStatusUpdate((p) => ({
-                                                        ...p,
-                                                        status: 'offer_sent',
-                                                        approvedAmount:
-                                                            pendingRevision.requestedAmount != null
-                                                                ? String(pendingRevision.requestedAmount)
-                                                                : p.approvedAmount,
-                                                        tenureDays: tenure != null ? String(tenure) : p.tenureDays,
-                                                    }));
-                                                }}
+                                                onClick={handleTriggerEvaluation}
+                                                disabled={loadingBRE}
+                                                className="h-7 text-xs font-medium text-indigo-700 border-indigo-200 hover:bg-indigo-50"
                                             >
-                                                Use requested values
+                                                {loadingBRE ? <RefreshCw className="w-3 h-3 animate-spin mr-1" /> : null}
+                                                {row.actionLabel}
+                                            </Button>
+                                        ) : (
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => row.actionTab && setActiveTab?.(row.actionTab)}
+                                                className="h-7 text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50/60"
+                                            >
+                                                {row.actionLabel}
+                                                <ExternalLink className="w-3 h-3 ml-1 text-indigo-400" />
                                             </Button>
                                         )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div className="px-5 py-2.5 bg-slate-50/40 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                    <span>Note: KYC verification validates applicant identity documents. It is separate from the CRIF / Account Aggregator credit check.</span>
+                </div>
+            </div>
+
+            {/* ========================================================================= */}
+            {/* 3. CREDIT ASSESSMENT & LOAN DECISION */}
+            {/* ========================================================================= */}
+            <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <div>
+                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Credit Assessment & Loan Decision</h3>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                            Underwriting affordability, FOIR calculation, and policy decision.
+                        </p>
+                    </div>
+                    <Badge 
+                        variant="outline" 
+                        className={cn(
+                            "text-[10px] font-bold uppercase px-2.5 py-0.5 border",
+                            camParticulars?.decision === 'APPROVE'
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : camParticulars?.decision === 'REJECT'
+                                ? "bg-rose-50 text-rose-700 border-rose-200"
+                                : "bg-slate-100 text-slate-700 border-slate-200"
+                        )}
+                    >
+                        {camParticulars?.decision || 'PENDING'}
+                    </Badge>
+                </div>
+
+                {breBlocksRecommend && (
+                    <div className="p-3.5 mx-5 mt-4 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start gap-2.5">
+                        <XCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
+                        <div>
+                            <span className="font-bold">BRE Result: Not Eligible.</span>
+                            <span className="ml-1">
+                                Policy rules recommend rejection. Approval is blocked unless overridden by Super Admin.
+                            </span>
+                        </div>
+                    </div>
+                )}
+
+                {(creditDecisionResult?.awaitingAaConsent || String(creditDecisionResult?.finalVerdict || '').toUpperCase() === 'AWAITING_AA_CONSENT') && (
+                    <div className="p-3.5 mx-5 mt-4 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-start gap-2.5">
+                        <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
+                        <div>
+                            <span className="font-bold">Credit check is waiting for bank (AA) consent.</span>
+                            <span className="ml-1">
+                                Share the Digitap bank link, then resume credit check before final approval.
+                            </span>
+                        </div>
+                    </div>
+                )}
+
+                <div className="p-5">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div className="p-3 rounded-lg border border-slate-100 bg-slate-50/40">
+                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">Loan Applied</span>
+                            <span className="text-sm font-bold text-slate-800 font-mono mt-0.5 block">
+                                ₹{formatInr(camParticulars?.loan_applied || loanApp?.principal_amount || 0)}
+                            </span>
+                        </div>
+                        <div className="p-3 rounded-lg border border-indigo-100 bg-indigo-50/30">
+                            <span className="text-[10px] uppercase font-semibold text-indigo-500 block tracking-wider">Recommended Loan</span>
+                            <span className="text-sm font-bold text-indigo-700 font-mono mt-0.5 block">
+                                ₹{formatInr(camParticulars?.loan_recommended || loanApp?.recommended_loan_amount || 0)}
+                            </span>
+                        </div>
+                        <div className="p-3 rounded-lg border border-slate-100 bg-slate-50/40">
+                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">Eligible Loan</span>
+                            <span className="text-sm font-bold text-slate-800 font-mono mt-0.5 block">
+                                ₹{formatInr(camParticulars?.eligible_loan || 0)}
+                            </span>
+                        </div>
+                        <div className="p-3 rounded-lg border border-slate-100 bg-slate-50/40">
+                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">Appraised Salary</span>
+                            <span className="text-sm font-bold text-slate-800 font-mono mt-0.5 block">
+                                ₹{formatInr(camParticulars?.appraised_salary || 0)}
+                            </span>
+                        </div>
+                        <div className="p-3 rounded-lg border border-slate-100 bg-slate-50/40">
+                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">Eligible FOIR</span>
+                            <span className="text-sm font-semibold text-slate-800 mt-0.5 block">
+                                {camParticulars?.eligible_foir_pct != null ? `${camParticulars.eligible_foir_pct}%` : '—'}
+                            </span>
+                        </div>
+                        <div className="p-3 rounded-lg border border-slate-100 bg-slate-50/40">
+                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">Final FOIR</span>
+                            <span className="text-sm font-semibold text-slate-800 mt-0.5 block">
+                                {camParticulars?.final_foir_pct != null ? `${camParticulars.final_foir_pct}%` : '—'}
+                            </span>
+                        </div>
+                        <div className="p-3 rounded-lg border border-slate-100 bg-slate-50/40">
+                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">Risk Level</span>
+                            <span className="text-sm font-bold text-slate-800 uppercase mt-0.5 block">
+                                {camParticulars?.risk_profile || creditDecisionResult?.riskCategory || '—'}
+                            </span>
+                        </div>
+                        <div className="p-3 rounded-lg border border-slate-100 bg-slate-50/40">
+                            <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">Decision</span>
+                            <span className={cn(
+                                "text-sm font-bold uppercase mt-0.5 block",
+                                camParticulars?.decision === 'APPROVE' ? "text-emerald-700" : "text-slate-800"
+                            )}>
+                                {camParticulars?.decision || (creditDecisionResult?.finalVerdict ? verdictLabel(creditDecisionResult.finalVerdict) : 'Pending')}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* ========================================================================= */}
+            {/* 4. CAM TERMS & REPAYMENT TABLE */}
+            {/* ========================================================================= */}
+            <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <div>
+                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">CAM Terms & Repayment</h3>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                            Credit Appraisal Memo (CAM) is the single source of truth for loan pricing and terms.
+                        </p>
+                    </div>
+                    {setActiveTab && (
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setActiveTab('cam')}
+                            className="h-7 px-3 text-xs font-semibold text-indigo-700 border-indigo-200 hover:bg-indigo-50"
+                        >
+                            Edit CAM
+                        </Button>
+                    )}
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="border-b border-slate-100 bg-slate-50/30 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                                <th className="py-2.5 px-5">Field</th>
+                                <th className="py-2.5 px-5 text-right">Value</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 text-xs text-slate-700 font-mono">
+                            <tr className="hover:bg-slate-50/40">
+                                <td className="py-2.5 px-5 font-sans font-medium text-slate-700">Loan Recommended</td>
+                                <td className="py-2.5 px-5 text-right font-bold text-slate-900">
+                                    ₹{formatInr(camParticulars?.loan_recommended || loanApp?.approved_amount || 0)}
+                                </td>
+                            </tr>
+                            <tr className="hover:bg-slate-50/40">
+                                <td className="py-2.5 px-5 font-sans font-medium text-slate-700">Tenure</td>
+                                <td className="py-2.5 px-5 text-right font-medium text-slate-800">
+                                    {camParticulars?.tenure_days ? `${camParticulars.tenure_days} days` : (loanApp?.tenure_days ? `${loanApp.tenure_days} days` : '—')}
+                                </td>
+                            </tr>
+                            <tr className="hover:bg-slate-50/40">
+                                <td className="py-2.5 px-5 font-sans font-medium text-slate-700">Interest Rate</td>
+                                <td className="py-2.5 px-5 text-right font-medium text-slate-800">
+                                    {camParticulars?.roi_pct != null ? `${camParticulars.roi_pct}% per day` : (loanApp?.applied_interest_rate_daily ? `${loanApp.applied_interest_rate_daily}% per day` : '—')}
+                                </td>
+                            </tr>
+                            <tr className="hover:bg-slate-50/40">
+                                <td className="py-2.5 px-5 font-sans font-medium text-slate-700">Platform Fee + GST</td>
+                                <td className="py-2.5 px-5 text-right font-medium text-slate-800">
+                                    ₹{formatInr(camParticulars?.net_admin_fee || camParticulars?.admin_fee_with_gst || 0)} ({camParticulars?.admin_fee_pct != null ? camParticulars.admin_fee_pct : 10}%)
+                                </td>
+                            </tr>
+                            <tr className="hover:bg-slate-50/40">
+                                <td className="py-2.5 px-5 font-sans font-medium text-slate-700">Net Disbursal</td>
+                                <td className="py-2.5 px-5 text-right font-bold text-emerald-700">
+                                    ₹{formatInr(camParticulars?.net_disb_amount || 0)}
+                                </td>
+                            </tr>
+                            <tr className="hover:bg-slate-50/40">
+                                <td className="py-2.5 px-5 font-sans font-medium text-slate-700">Total Repayment</td>
+                                <td className="py-2.5 px-5 text-right font-bold text-slate-900">
+                                    ₹{formatInr(camParticulars?.repay_amount || 0)}
+                                </td>
+                            </tr>
+                            <tr className="hover:bg-slate-50/40">
+                                <td className="py-2.5 px-5 font-sans font-medium text-slate-700">Disbursal Date</td>
+                                <td className="py-2.5 px-5 text-right font-sans text-slate-800">
+                                    {camParticulars?.disbursal_date || '—'}
+                                </td>
+                            </tr>
+                            <tr className="hover:bg-slate-50/40">
+                                <td className="py-2.5 px-5 font-sans font-medium text-slate-700">Repayment Date</td>
+                                <td className="py-2.5 px-5 text-right font-sans text-slate-800">
+                                    {camParticulars?.repay_date || '—'}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* ========================================================================= */}
+            {/* 5. WORKFLOW STATUS & PRIMARY ACTION */}
+            {/* ========================================================================= */}
+            <div className="bg-white rounded-xl border border-slate-200/80 p-5 shadow-sm space-y-5">
+                <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+                    <div>
+                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                            {alreadySanctioned ? 'Offer Confirmation & Dispatch' : 'Application Decision & Workflow'}
+                        </h3>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                            {alreadySanctioned 
+                                ? 'Review sanctioned CAM terms and send the official loan offer to the customer.' 
+                                : 'Select the appropriate workflow outcome and submit the underwriter decision.'}
+                        </p>
+                    </div>
+                </div>
+
+                {/* Customer requested offer revisions */}
+                {awaitingRevision && (
+                    <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-lg space-y-3">
+                        <div className="flex items-start gap-2.5">
+                            <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                            <div>
+                                <p className="text-xs font-bold text-amber-900">Customer requested changes to the offer</p>
+                                <p className="text-[11px] text-amber-800 mt-0.5">
+                                    Acceptance is paused until you re-send the offer.
+                                    {revisionInfo && ` Request ${revisionInfo.used} of ${revisionInfo.maxRequests}.`}
+                                </p>
+                            </div>
+                        </div>
+                        {pendingRevision && (
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
+                                <div className="bg-white p-2.5 rounded border border-amber-100">
+                                    <span className="text-[10px] text-slate-500 block uppercase">Requested Amount</span>
+                                    <span className="font-bold text-slate-800 font-mono">
+                                        ₹{formatInr(pendingRevision.requestedAmount)}
+                                    </span>
+                                </div>
+                                <div className="bg-white p-2.5 rounded border border-amber-100">
+                                    <span className="text-[10px] text-slate-500 block uppercase">Requested Tenure</span>
+                                    <span className="font-bold text-slate-800">
+                                        {pendingRevision.requestedTenureDays} days
+                                    </span>
+                                </div>
+                                <div className="bg-white p-2.5 rounded border border-amber-100">
+                                    <span className="text-[10px] text-slate-500 block uppercase">Customer Note</span>
+                                    <span className="text-slate-700">
+                                        {pendingRevision.customerNote || 'None'}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* 7. Dedicated Offer Confirmation Area when Sanctioned */}
+                {alreadySanctioned && !isCompletedOrPayout && (
+                    <div className="p-4 rounded-xl border border-indigo-100 bg-indigo-50/20 space-y-3">
+                        <div className="flex items-center gap-2">
+                            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                            <span className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                                Sanctioned Offer Confirmation
+                            </span>
+                            <span className="text-[11px] text-slate-500">
+                                (Matches latest CAM terms)
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
+                            <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                                <span className="text-[10px] text-slate-400 block uppercase">CAM Loan Amount</span>
+                                <span className="font-bold text-slate-800 font-mono">
+                                    ₹{formatInr(camParticulars?.loan_recommended || loanApp?.approved_amount || 0)}
+                                </span>
+                            </div>
+                            <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                                <span className="text-[10px] text-slate-400 block uppercase">Tenure</span>
+                                <span className="font-bold text-slate-800">
+                                    {camParticulars?.tenure_days || loanApp?.tenure_days || '—'} days
+                                </span>
+                            </div>
+                            <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                                <span className="text-[10px] text-slate-400 block uppercase">Platform Fee</span>
+                                <span className="font-bold text-slate-800 font-mono">
+                                    ₹{formatInr(camParticulars?.net_admin_fee || camParticulars?.admin_fee_with_gst || 0)}
+                                </span>
+                            </div>
+                            <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                                <span className="text-[10px] text-slate-400 block uppercase">Net Disbursal</span>
+                                <span className="font-bold text-emerald-700 font-mono">
+                                    ₹{formatInr(camParticulars?.net_disb_amount || 0)}
+                                </span>
+                            </div>
+                            <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                                <span className="text-[10px] text-slate-400 block uppercase">Total Repayment</span>
+                                <span className="font-bold text-slate-900 font-mono">
+                                    ₹{formatInr(camParticulars?.repay_amount || 0)}
+                                </span>
+                            </div>
+                        </div>
+                        <p className="text-[11px] text-slate-500">
+                            Customer will receive an SMS and Email notification with the sanction letter to accept, record video verification, and e-sign.
+                        </p>
+                    </div>
+                )}
+
+                {!isCompletedOrPayout && (
+                    <form onSubmit={handleFormSubmit} className="space-y-4">
+                        <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                                Select Next Workflow Action
+                            </label>
+                            <select
+                                value={statusUpdate.status || ''}
+                                onChange={(e) => setStatusUpdate((p) => ({ ...p, status: e.target.value }))}
+                                className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 font-medium"
+                            >
+                                <option value="" disabled>Select decision...</option>
+                                {alreadySanctioned ? (
+                                    <>
+                                        <option value="offer_sent">Send offer to customer</option>
+                                        <option value="rejected">Reject application</option>
+                                    </>
+                                ) : admin?.role === 'credit_manager' ? (
+                                    <>
+                                        <option value="under_review">Under Review</option>
+                                        <option value="pending_pd">Pending PD (personal discussion)</option>
+                                        {!hidePositiveOutcomes && (
+                                            <option value="recommended">Recommend Approval (send to underwriter)</option>
+                                        )}
+                                        <option value="rejected">Reject application</option>
+                                    </>
+                                ) : ['underwriter', 'approver'].includes(roleCode) ? (
+                                    <>
+                                        <option value="under_review">Under Review</option>
+                                        <option value="pending_pd">Pending PD (personal discussion)</option>
+                                        {!hidePositiveOutcomes && (
+                                            <option value="recommended">Recommend Approval (send to underwriter)</option>
+                                        )}
+                                        {!hidePositiveOutcomes && (
+                                            <option value="approved">Approve limit (internal sanction)</option>
+                                        )}
+                                        {!hidePositiveOutcomes && (
+                                            <option value="offer_sent">Send offer to customer</option>
+                                        )}
+                                        <option value="rejected">Reject application</option>
                                     </>
                                 ) : (
-                                    <p className="text-[10px] text-amber-800">Loading request details…</p>
-                                )}
-                            </div>
-                        )}
-
-                        {alreadySanctioned && !awaitingRevision && (
-                            <div className="flex items-start gap-3 p-4 bg-emerald-50 border border-emerald-100 rounded-lg">
-                                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                                <div>
-                                    <p className="text-xs font-medium text-emerald-900">
-                                        {appStatus === 'offer_sent'
-                                            ? 'The sanction email was sent. Change Platform Fee inside the product range and send the offer again.'
-                                            : appStatus === 'offer_rejected'
-                                            ? 'Offer was declined by the customer. Confirm product, amount, and tenure, then re-send the offer.'
-                                            : 'Sanctioned — confirm product and amount, then send the offer to the customer.'}
-                                    </p>
-                                    <p className="text-[10px] text-emerald-700 mt-0.5">
-                                        {appStatus === 'offer_sent'
-                                            ? 'The customer gets a new sanction email. Amount, tenure, and interest stay on this form.'
-                                            : appStatus === 'offer_rejected'
-                                            ? 'Re-sending will update the offer and notify the customer to review the new terms.'
-                                            : 'LAN is already issued. Approve again is not needed here.'}
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="flex items-center justify-between">
-                             <h4 className="text-sm font-medium text-slate-800">
-                                {alreadySanctioned ? 'Send offer' : 'Submit Final Result'}
-                             </h4>
-                             {gates.breOk && !alreadySanctioned && (
-                                 <span className="text-[10px] font-medium text-indigo-500 uppercase tracking-widest">
-                                     Use CAM tab for maker-checker notes
-                                 </span>
-                             )}
-                        </div>
-
-                        <form onSubmit={handleFormSubmit} className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2 md:col-span-2">
-                                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">New Workflow Status</label>
-                                    <select
-                                        value={statusUpdate.status || ''}
-                                        onChange={(e) => setStatusUpdate(p => ({ ...p, status: e.target.value }))}
-                                        className="w-full h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-300"
-                                    >
-                                        <option value="" disabled>Select outcome...</option>
-                                        {alreadySanctioned ? (
-                                            <>
-                                                <option value="offer_sent">Send offer to customer</option>
-                                                <option value="rejected">Reject application</option>
-                                            </>
-                                        ) : admin?.role === 'credit_manager' ? (
-                                            <>
-                                                <option value="under_review">Under Review</option>
-                                                <option value="pending_pd">Pending PD (personal discussion)</option>
-                                                {!hidePositiveOutcomes && (
-                                                    <option value="recommended">Recommend Approval (send to underwriter)</option>
-                                                )}
-                                                <option value="rejected">Reject application</option>
-                                            </>
-                                        ) : ['underwriter', 'approver'].includes(String(admin?.role_code || admin?.role || '').toLowerCase()) ? (
-                                            <>
-                                                <option value="under_review">Under Review</option>
-                                                <option value="pending_pd">Pending PD (personal discussion)</option>
-                                                {!hidePositiveOutcomes && (
-                                                    <option value="recommended">Recommend Approval (send to underwriter)</option>
-                                                )}
-                                                {!hidePositiveOutcomes && (
-                                                    <option value="approved">Approve limit (internal sanction)</option>
-                                                )}
-                                                {!hidePositiveOutcomes && (
-                                                    <option value="offer_sent">Send offer to customer</option>
-                                                )}
-                                                <option value="rejected">Reject application</option>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <option value="under_review">Under Review</option>
-                                                {!hidePositiveOutcomes && (
-                                                    <option value="recommended">Recommended (send to underwriter)</option>
-                                                )}
-                                                {!hidePositiveOutcomes && (
-                                                    <option value="offer_sent">Send offer to customer</option>
-                                                )}
-                                                {!hidePositiveOutcomes && (
-                                                    <option value="approved">Approve limit (internal sanction)</option>
-                                                )}
-                                                <option value="rejected">Reject application</option>
-                                            </>
+                                    <>
+                                        <option value="under_review">Under Review</option>
+                                        {!hidePositiveOutcomes && (
+                                            <option value="recommended">Recommended (send to underwriter)</option>
                                         )}
-                                    </select>
-                                    {statusUpdate.status && STATUS_OPTION_HELP[statusUpdate.status] && (
-                                        <p className="text-[11px] text-slate-500 leading-relaxed px-0.5">
-                                            {STATUS_OPTION_HELP[statusUpdate.status]}
-                                        </p>
-                                                    {showOfferParams && (
-                                     <div className="space-y-4 md:col-span-2 animate-in slide-in-from-right-4">
-                                        {/* Header explaining that CAM is the source of truth */}
-                                        <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-slate-900 text-white rounded-xl shadow-sm border border-slate-800">
-                                            <div className="space-y-0.5 min-w-0">
-                                                <div className="flex items-center gap-2">
-                                                    <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                                                    <span className="text-xs font-semibold text-white tracking-wide">
-                                                        CAM Terms & Appraisal (Source of Truth)
-                                                    </span>
-                                                </div>
-                                                <p className="text-[11px] text-slate-300 leading-relaxed">
-                                                    Loan limit, tenure, daily rate, and platform fee are derived directly from the Credit Appraisal Memo (CAM).
-                                                </p>
-                                            </div>
-                                            {setActiveTab && (
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => setActiveTab('cam')}
-                                                    className="h-8 px-3 text-xs bg-white/10 hover:bg-white/20 text-white border-white/20 shrink-0 font-medium"
-                                                >
-                                                    Edit in CAM
-                                                </Button>
-                                            )}
-                                        </div>
-
-                                        {camParticulars && (camParticulars.loan_recommended || camParticulars.appraised_salary) ? (
-                                            <div className="space-y-3">
-                                                <ResultsStrip particulars={camParticulars} policy={camPolicy} />
-
-                                                {/* 4 Core CAM Areas Breakdown */}
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                    {/* 1. Salary Appraisal */}
-                                                    <div className="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
-                                                        <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
-                                                            <span className="text-[11px] font-bold text-slate-800">1. Salary Appraisal</span>
-                                                            <span className="text-[10px] text-slate-500 font-mono">
-                                                                Pay Date: {camParticulars.next_pay_date || '—'}
-                                                            </span>
-                                                        </div>
-                                                        <div className="grid grid-cols-2 gap-2 text-xs">
-                                                            <div>
-                                                                <span className="text-[10px] text-slate-500 block">Appraised Salary</span>
-                                                                <span className="font-semibold text-slate-900 font-mono">
-                                                                    ₹{formatInr(camParticulars.appraised_salary)}
-                                                                </span>
-                                                            </div>
-                                                            <div>
-                                                                <span className="text-[10px] text-slate-500 block">Average Salary</span>
-                                                                <span className="font-medium text-slate-700 font-mono">
-                                                                    ₹{formatInr(camParticulars.avg_salary)}
-                                                                </span>
-                                                            </div>
-                                                            <div>
-                                                                <span className="text-[10px] text-slate-500 block">Method</span>
-                                                                <span className="font-medium text-slate-700 uppercase">
-                                                                    {camParticulars.appraisal_method || '—'}
-                                                                </span>
-                                                            </div>
-                                                            <div>
-                                                                <span className="text-[10px] text-slate-500 block">Variance / On-time</span>
-                                                                <span className="font-medium text-slate-700">
-                                                                    {camParticulars.salary_variance || '—'} / {camParticulars.salary_on_time || '—'}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* 2. Affordability (FOIR) */}
-                                                    <div className="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
-                                                        <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
-                                                            <span className="text-[11px] font-bold text-slate-800">2. Affordability (FOIR)</span>
-                                                            <span className="text-[10px] text-slate-500">
-                                                                Eligible FOIR: {camParticulars.eligible_foir_pct ? `${camParticulars.eligible_foir_pct}%` : '—'}
-                                                            </span>
-                                                        </div>
-                                                        <div className="grid grid-cols-2 gap-2 text-xs">
-                                                            <div>
-                                                                <span className="text-[10px] text-slate-500 block">Eligible Loan</span>
-                                                                <span className="font-semibold text-emerald-700 font-mono">
-                                                                    ₹{formatInr(camParticulars.eligible_loan)}
-                                                                </span>
-                                                            </div>
-                                                            <div>
-                                                                <span className="text-[10px] text-slate-500 block">FOIR Income</span>
-                                                                <span className="font-medium text-slate-700 font-mono">
-                                                                    ₹{formatInr(camParticulars.foir_income)}
-                                                                </span>
-                                                            </div>
-                                                            <div>
-                                                                <span className="text-[10px] text-slate-500 block">Appraised Obligations</span>
-                                                                <span className="font-medium text-slate-700 font-mono">
-                                                                    {camParticulars.appraised_obligations ? `₹${formatInr(camParticulars.appraised_obligations)}` : '—'}
-                                                                </span>
-                                                            </div>
-                                                            <div>
-                                                                <span className="text-[10px] text-slate-500 block">Final FOIR</span>
-                                                                <span className="font-semibold text-slate-900">
-                                                                    {camParticulars.final_foir_pct ? `${camParticulars.final_foir_pct}%` : '—'}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* 3. Loan Decision */}
-                                                    <div className="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
-                                                        <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
-                                                            <span className="text-[11px] font-bold text-slate-800">3. Loan Decision</span>
-                                                            <Badge variant="outline" className="text-[9px] font-semibold bg-emerald-50 text-emerald-700 border-emerald-200">
-                                                                {camParticulars.decision || 'APPROVE'}
-                                                            </Badge>
-                                                        </div>
-                                                        <div className="grid grid-cols-2 gap-2 text-xs">
-                                                            <div>
-                                                                <span className="text-[10px] text-slate-500 block">Loan Recommended</span>
-                                                                <span className="font-bold text-slate-900 text-sm font-mono">
-                                                                    ₹{formatInr(camParticulars.loan_recommended)}
-                                                                </span>
-                                                            </div>
-                                                            <div>
-                                                                <span className="text-[10px] text-slate-500 block">Loan Applied</span>
-                                                                <span className="font-medium text-slate-700 font-mono">
-                                                                    ₹{formatInr(camParticulars.loan_applied || loanApp?.principal_amount)}
-                                                                </span>
-                                                            </div>
-                                                            <div className="col-span-2">
-                                                                <span className="text-[10px] text-slate-500 block">Recommendation Reason</span>
-                                                                <span className="font-medium text-slate-700 text-[11px]">
-                                                                    {camParticulars.recommendation_reason || camParticulars.decision_reason || 'Within FOIR and policy limits'}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* 4. Fees & Repayment */}
-                                                    <div className="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
-                                                        <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
-                                                            <span className="text-[11px] font-bold text-slate-800">4. Fees & Repayment</span>
-                                                            <span className="text-[10px] text-indigo-700 font-semibold">
-                                                                ROI: {camParticulars.roi_pct ? `${camParticulars.roi_pct}%/day` : '1.0%/day'}
-                                                            </span>
-                                                        </div>
-                                                        <div className="grid grid-cols-2 gap-2 text-xs">
-                                                            <div>
-                                                                <span className="text-[10px] text-slate-500 block">Net Disbursal</span>
-                                                                <span className="font-bold text-emerald-700 font-mono">
-                                                                    ₹{formatInr(camParticulars.net_disb_amount)}
-                                                                </span>
-                                                            </div>
-                                                            <div>
-                                                                <span className="text-[10px] text-slate-500 block">Repay Amount</span>
-                                                                <span className="font-bold text-[#222222] font-mono">
-                                                                    ₹{formatInr(camParticulars.repay_amount)}
-                                                                </span>
-                                                            </div>
-                                                            <div>
-                                                                <span className="text-[10px] text-slate-500 block">Disbursal → Repay Date</span>
-                                                                <span className="font-medium text-slate-700 text-[11px]">
-                                                                    {camParticulars.disbursal_date || '—'} → {camParticulars.repay_date || '—'} ({camParticulars.tenure_days ? `${camParticulars.tenure_days}d` : '—'})
-                                                                </span>
-                                                            </div>
-                                                            <div>
-                                                                <span className="text-[10px] text-slate-500 block">Platform Fee + GST</span>
-                                                                <span className="font-medium text-slate-700 font-mono text-[11px]">
-                                                                    {camParticulars.admin_fee_pct ? `${camParticulars.admin_fee_pct}%` : '10%'} (₹{formatInr(camParticulars.net_admin_fee || camParticulars.admin_fee_with_gst)})
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="p-4 rounded-xl border border-amber-200 bg-amber-50 flex items-center justify-between gap-3">
-                                                <div className="flex items-center gap-3">
-                                                    <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
-                                                    <div>
-                                                        <p className="text-xs font-semibold text-amber-900">CAM Appraisal has not run yet</p>
-                                                        <p className="text-[11px] text-amber-700">Please calculate and save the CAM appraisal before sending the offer.</p>
-                                                    </div>
-                                                </div>
-                                                {setActiveTab && (
-                                                    <Button type="button" size="sm" onClick={() => setActiveTab('cam')} className="bg-amber-600 hover:bg-amber-700 text-white text-xs shrink-0">
-                                                        Go to CAM Tab
-                                                    </Button>
-                                                )}
-                                            </div>
+                                        {!hidePositiveOutcomes && (
+                                            <option value="offer_sent">Send offer to customer</option>
                                         )}
-                                     </div>
+                                        {!hidePositiveOutcomes && (
+                                            <option value="approved">Approve limit (internal sanction)</option>
+                                        )}
+                                        <option value="rejected">Reject application</option>
+                                    </>
                                 )}
-                            </div>
-
-                            {statusUpdate.status && statusUpdate.status !== 'rejected' && (
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">Message or Reason</label>
-                                    <Textarea className="rounded-lg min-h-[72px] border-slate-200 bg-slate-50 text-xs p-3" value={statusUpdate.remarks} onChange={e => setStatusUpdate(p => ({...p, remarks: e.target.value}))} placeholder="Write something here for the customer..." />
-                                </div>
-                            )}
-
-                            {statusUpdate.status === 'rejected' && (
-                                <p className="text-[11px] text-slate-500 leading-relaxed">
-                                    You will choose rejection reasons and confirm before the application is closed.
+                            </select>
+                            {statusUpdate.status && STATUS_OPTION_HELP[statusUpdate.status] && (
+                                <p className="text-[11px] text-slate-500 leading-relaxed pt-0.5">
+                                    {STATUS_OPTION_HELP[statusUpdate.status]}
                                 </p>
                             )}
+                        </div>
 
-                            {(error || message) && (
-                                <Alert
-                                    id="decision-result"
-                                    variant={error ? 'destructive' : 'default'}
-                                    className="py-2.5 scroll-mt-24"
-                                >
-                                    <AlertDescription className="text-xs">{error || message}</AlertDescription>
-                                </Alert>
+                        {statusUpdate.status && statusUpdate.status !== 'rejected' && (
+                            <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                                    Remarks / Internal Notes
+                                </label>
+                                <Textarea
+                                    className="rounded-lg min-h-[70px] border-slate-200 bg-white text-xs p-3"
+                                    value={statusUpdate.remarks}
+                                    onChange={(e) => setStatusUpdate((p) => ({ ...p, remarks: e.target.value }))}
+                                    placeholder="Enter approval notes or customer-facing remarks..."
+                                />
+                            </div>
+                        )}
+
+                        {gatesBlockSave && !['super_admin', 'org_admin'].includes(roleCode) && (
+                            <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 leading-relaxed">
+                                <span className="font-bold uppercase tracking-wider block text-[10px] mb-0.5">Verification Pending</span>
+                                Complete the remaining {pendingGates.length} verification check{pendingGates.length > 1 ? 's' : ''}: {pendingGates.map((g) => g.label).join(', ')}.
+                            </div>
+                        )}
+
+                        {(error || message) && (
+                            <Alert id="decision-result" variant={error ? 'destructive' : 'default'} className="py-2.5">
+                                <AlertDescription className="text-xs">{error || message}</AlertDescription>
+                            </Alert>
+                        )}
+
+                        <Button
+                            id="decision-submit"
+                            type="submit"
+                            className="w-full h-11 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold uppercase tracking-wider transition-all"
+                            disabled={updating || !statusUpdate.status || (gatesBlockSave && !['super_admin', 'org_admin'].includes(roleCode))}
+                        >
+                            {updating ? (
+                                <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                            ) : ['super_admin', 'org_admin'].includes(roleCode) && gatesBlockSave ? (
+                                <ShieldCheck className="w-4 h-4 mr-2 text-amber-400" />
+                            ) : isSendOffer ? (
+                                <Mail className="w-4 h-4 mr-2" />
+                            ) : (
+                                <Save className="w-4 h-4 mr-2" />
                             )}
+                            {['super_admin', 'org_admin'].includes(roleCode) && gatesBlockSave
+                                ? 'DIRECT OVERRIDE & SAVE'
+                                : isSendOffer
+                                ? 'SEND OFFER TO CUSTOMER'
+                                : statusUpdate.status === 'rejected'
+                                ? 'REVIEW & REJECT'
+                                : 'SAVE DECISION'}
+                        </Button>
+                    </form>
+                )}
+            </div>
 
-                            <Button id="decision-submit" type="submit" className="w-full h-10 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs transition-shadow" disabled={updating || !statusUpdate.status || (gatesBlockSave && !['super_admin', 'org_admin'].includes(String(admin?.role_code || admin?.role || '').toLowerCase()))}>
-                                {updating ? (
-                                    <RefreshCw className="w-4 h-4 animate-spin" />
-                                ) : ['super_admin', 'org_admin'].includes(String(admin?.role_code || admin?.role || '').toLowerCase()) ? (
-                                    <ShieldCheck className="w-4 h-4 mr-2 text-amber-400" />
-                                ) : isSendOffer ? (
-                                    <Mail className="w-4 h-4 mr-2" />
-                                ) : (
-                                    <Save className="w-4 h-4 mr-2" />
-                                )}
-                                {['super_admin', 'org_admin'].includes(String(admin?.role_code || admin?.role || '').toLowerCase())
-                                    ? 'DIRECT OVERRIDE & SAVE'
-                                    : isSendOffer
-                                      ? 'SEND OFFER TO CUSTOMER'
-                                      : statusUpdate.status === 'rejected'
-                                        ? 'REVIEW & REJECT'
-                                      : 'SAVE DECISION'}
-                            </Button>
-                        </form>
+            {/* ========================================================================= */}
+            {/* 6. ADVANCED DETAILS — COLLAPSED BY DEFAULT */}
+            {/* ========================================================================= */}
+            <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
+                <button
+                    type="button"
+                    onClick={() => setAdvancedOpen((v) => !v)}
+                    className="w-full px-5 py-3.5 flex items-center justify-between text-left hover:bg-slate-50/60 transition-colors bg-slate-50/30"
+                >
+                    <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-slate-500" />
+                        <div>
+                            <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block">Advanced Details & Appraisal Calculations</span>
+                            <span className="text-[11px] text-slate-500">Salary breakdown, affordability obligations, FOIR income, and step-by-step workflow guide.</span>
+                        </div>
+                    </div>
+                    {advancedOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                </button>
+
+                {advancedOpen && (
+                    <div className="p-5 border-t border-slate-100 space-y-4 animate-in fade-in duration-200">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Salary Appraisal Particulars */}
+                            <div className="p-3.5 rounded-lg border border-slate-200 bg-slate-50/30 space-y-2">
+                                <span className="text-xs font-bold text-slate-800 uppercase tracking-wide block border-b border-slate-200 pb-1">
+                                    Salary Appraisal Particulars
+                                </span>
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 uppercase block">Next Pay Date</span>
+                                        <span className="font-semibold text-slate-800">{camParticulars?.next_pay_date || '—'}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 uppercase block">Average Salary</span>
+                                        <span className="font-semibold text-slate-800 font-mono">₹{formatInr(camParticulars?.avg_salary)}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 uppercase block">Appraisal Method</span>
+                                        <span className="font-semibold text-slate-800 uppercase">{camParticulars?.appraisal_method || '—'}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 uppercase block">Variance / On-time</span>
+                                        <span className="font-semibold text-slate-800">{camParticulars?.salary_variance || '—'} / {camParticulars?.salary_on_time || '—'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Affordability & Obligations */}
+                            <div className="p-3.5 rounded-lg border border-slate-200 bg-slate-50/30 space-y-2">
+                                <span className="text-xs font-bold text-slate-800 uppercase tracking-wide block border-b border-slate-200 pb-1">
+                                    Affordability & Obligations
+                                </span>
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 uppercase block">FOIR Income</span>
+                                        <span className="font-semibold text-slate-800 font-mono">₹{formatInr(camParticulars?.foir_income)}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 uppercase block">Appraised Obligations</span>
+                                        <span className="font-semibold text-slate-800 font-mono">₹{formatInr(camParticulars?.appraised_obligations)}</span>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <span className="text-[10px] text-slate-400 uppercase block">Decision Reasoning / Cap</span>
+                                        <span className="text-slate-700 leading-relaxed block text-[11px]">
+                                            {camParticulars?.recommendation_reason || camParticulars?.decision_reason || 'Policy criteria met.'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Step-by-step workflow guide */}
+                        <div className="p-3.5 rounded-lg border border-slate-200 bg-slate-50/30 space-y-2">
+                            <span className="text-xs font-bold text-slate-800 uppercase tracking-wide block">
+                                Standard Loan Lifecycle Workflow
+                            </span>
+                            <ol className="list-decimal list-inside space-y-1 text-xs text-slate-600 leading-relaxed">
+                                {WORKFLOW_STEPS.map((step, idx) => (
+                                    <li key={idx}>{step}</li>
+                                ))}
+                            </ol>
+                        </div>
                     </div>
                 )}
             </div>
-        </div>
 
-        {/* Super Admin override confirmation */}
-        <Dialog open={showOverrideDialog} onOpenChange={setShowOverrideDialog}>
-            <DialogContent className="sm:max-w-md rounded-lg p-5 border border-amber-200">
-                <DialogHeader>
-                    <DialogTitle className="text-base font-semibold text-amber-900 flex items-center gap-2">
-                        <ShieldCheck className="w-5 h-5" /> Emergency override
-                    </DialogTitle>
-                    <DialogDescription className="text-xs text-slate-600 mt-2">
-                        Verification checklist is incomplete. Saving without KYC/BRE is only for emergencies and is logged.
-                    </DialogDescription>
-                </DialogHeader>
-                <ul className="text-xs text-amber-900 space-y-1 py-2 list-disc list-inside">
-                    {pendingGates.map((g) => (
-                        <li key={g.key}>{g.label}</li>
-                    ))}
-                </ul>
-                <DialogFooter className="gap-2 mt-2">
-                    <Button variant="ghost" onClick={() => setShowOverrideDialog(false)} className="h-9 text-xs">Cancel</Button>
-                    <Button onClick={confirmOverrideSubmit} disabled={updating} className="h-9 bg-amber-600 hover:bg-amber-700 text-white text-xs">
-                        Confirm override & save
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-
-        {/* Blacklist Confirmation Dialog */}
-        <Dialog open={showBlacklistDialog} onOpenChange={setShowBlacklistDialog}>
-            <DialogContent className="sm:max-w-md bg-white rounded-lg border border-slate-200 p-5">
-                <DialogHeader>
-                    <DialogTitle className="text-lg font-medium text-red-700 flex items-center gap-2">
-                        <ShieldBan className="w-5 h-5" /> Blacklist Customer
-                    </DialogTitle>
-                    <DialogDescription className="text-xs text-slate-500 mt-2">
-                        This action will permanently block this customer. 
-                        They will not be able to apply for any future loans. {!['disbursed', 'defaulted', 'closed'].includes(loanApp.application_status) ? 'The current application will be automatically rejected.' : 'The active/disbursed loan status will not be affected.'}
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 pt-4">
-                    <div className="p-3 bg-red-50 border border-red-100 rounded-lg">
-                        <p className="text-[10px] text-red-600 font-medium uppercase tracking-widest mb-1">Customer Details</p>
-                        <p className="text-xs text-red-800">{userData?.full_name || 'Unknown'} • {userData?.mobile || userData?.profile?.mobile || 'N/A'}</p>
-                        <p className="text-[10px] text-red-500 mt-1">PAN: {userData?.profile?.pancard || userData?.pancard || 'N/A'}</p>
-                    </div>
-                    <div className="space-y-2">
-                        <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest pl-1">Reason (Required)</span>
-                        <Textarea 
-                            placeholder="Why are you blacklisting this customer? e.g. Fraud, fake documents, defaulter..." 
-                            value={blacklistReason}
-                            onChange={(e) => setBlacklistReason(e.target.value)}
-                            className="min-h-[100px] rounded-lg border-red-100 bg-red-50/30 text-sm font-normal resize-none focus:ring-red-200"
-                        />
-                    </div>
-                </div>
-                <DialogFooter className="mt-6 gap-2">
-                    <Button variant="ghost" onClick={() => setShowBlacklistDialog(false)} className="rounded-lg text-slate-400 text-xs font-medium">Cancel</Button>
-                    <Button 
-                        variant="destructive" 
-                        onClick={handleBlacklistCustomer} 
-                        disabled={blacklisting || !blacklistReason.trim()}
-                        className="rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium text-xs px-8 h-11"
+            {/* ========================================================================= */}
+            {/* 7. DANGER ZONE — COLLAPSED BY DEFAULT */}
+            {/* ========================================================================= */}
+            {!['rejected', 'closed', 'cancelled'].includes(appStatus) && (
+                <div className="bg-white rounded-xl border border-rose-200/80 shadow-sm overflow-hidden">
+                    <button
+                        type="button"
+                        onClick={() => setDangerOpen((v) => !v)}
+                        className="w-full px-5 py-3.5 flex items-center justify-between text-left hover:bg-rose-50/40 transition-colors bg-rose-50/20"
                     >
-                        {blacklisting ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : <ShieldBan className="w-4 h-4 mr-2" />}
-                        {blacklisting ? "Processing..." : "Confirm Blacklist"}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+                        <div className="flex items-center gap-2">
+                            <ShieldBan className="w-4 h-4 text-rose-600" />
+                            <div>
+                                <span className="text-xs font-bold text-rose-800 uppercase tracking-wider block">Danger Zone</span>
+                                <span className="text-[11px] text-rose-600">Customer blacklisting and permanent security block.</span>
+                            </div>
+                        </div>
+                        {dangerOpen ? <ChevronUp className="w-4 h-4 text-rose-400" /> : <ChevronDown className="w-4 h-4 text-rose-400" />}
+                    </button>
 
-        <RejectApplicationDialog
-            open={showRejectDialog}
-            onOpenChange={setShowRejectDialog}
-            onConfirm={handleRejectConfirm}
-            updating={updating}
-        />
-        </>
+                    {dangerOpen && (
+                        <div className="p-5 border-t border-rose-100 space-y-3 animate-in fade-in duration-200">
+                            <p className="text-xs text-slate-700 leading-relaxed">
+                                Blacklisting permanently blocks the customer's PAN (<span className="font-semibold">{userData?.profile?.pancard || userData?.pancard || 'N/A'}</span>) and mobile number (<span className="font-semibold">{userData?.mobile || userData?.profile?.mobile || 'N/A'}</span>) from creating future loan applications.
+                            </p>
+                            <p className="text-xs text-rose-700 font-medium">
+                                Warning: The current application will be automatically rejected.
+                            </p>
+                            <div className="pt-1">
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => setShowBlacklistDialog(true)}
+                                    className="h-9 px-4 text-xs font-bold uppercase tracking-wider bg-rose-600 hover:bg-rose-700 text-white"
+                                >
+                                    <ShieldBan className="w-3.5 h-3.5 mr-2" />
+                                    Blacklist Customer
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* ========================================================================= */}
+            {/* DIALOGS (Emergency Override, Blacklist, Reject, Payout Action) */}
+            {/* ========================================================================= */}
+
+            {/* Super Admin Override Dialog */}
+            <Dialog open={showOverrideDialog} onOpenChange={setShowOverrideDialog}>
+                <DialogContent className="sm:max-w-md rounded-lg p-5 border border-amber-200">
+                    <DialogHeader>
+                        <DialogTitle className="text-base font-semibold text-amber-900 flex items-center gap-2">
+                            <ShieldCheck className="w-5 h-5" /> Emergency Override
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-slate-600 mt-2">
+                            Verification checklist is incomplete. Saving without KYC/BRE is only for emergencies and is audited.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <ul className="text-xs text-amber-900 space-y-1 py-2 list-disc list-inside">
+                        {pendingGates.map((g) => (
+                            <li key={g.key}>{g.label}</li>
+                        ))}
+                    </ul>
+                    <DialogFooter className="gap-2 mt-2">
+                        <Button variant="ghost" onClick={() => setShowOverrideDialog(false)} className="h-9 text-xs">Cancel</Button>
+                        <Button onClick={confirmOverrideSubmit} disabled={updating} className="h-9 bg-amber-600 hover:bg-amber-700 text-white text-xs">
+                            Confirm Override & Save
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Blacklist Confirmation Dialog */}
+            <Dialog open={showBlacklistDialog} onOpenChange={setShowBlacklistDialog}>
+                <DialogContent className="sm:max-w-md bg-white rounded-lg border border-slate-200 p-5">
+                    <DialogHeader>
+                        <DialogTitle className="text-lg font-medium text-rose-700 flex items-center gap-2">
+                            <ShieldBan className="w-5 h-5" /> Blacklist Customer
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500 mt-2">
+                            This action permanently blocks this customer's PAN and mobile from all future applications. The current application will be auto-rejected.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                        <div className="p-3 bg-rose-50 border border-rose-100 rounded-lg text-xs space-y-1">
+                            <p className="text-[10px] text-rose-600 font-bold uppercase tracking-wider">Customer Details</p>
+                            <p className="text-rose-900 font-semibold">{userData?.full_name || 'Customer'} • {userData?.mobile || userData?.profile?.mobile || 'N/A'}</p>
+                            <p className="text-rose-700 font-mono">PAN: {userData?.profile?.pancard || userData?.pancard || 'N/A'}</p>
+                        </div>
+                        <div className="space-y-1.5">
+                            <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Reason (Required)</span>
+                            <Textarea 
+                                placeholder="Why are you blacklisting this customer? (e.g. Fraud, fake documents, defaulter)"
+                                value={blacklistReason}
+                                onChange={(e) => setBlacklistReason(e.target.value)}
+                                className="min-h-[90px] rounded-lg border-rose-200 text-xs resize-none"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter className="mt-6 gap-2">
+                        <Button variant="ghost" onClick={() => setShowBlacklistDialog(false)} className="text-xs font-medium">Cancel</Button>
+                        <Button 
+                            variant="destructive" 
+                            onClick={handleBlacklistCustomer} 
+                            disabled={blacklisting || !blacklistReason.trim()}
+                            className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs h-10 px-6"
+                        >
+                            {blacklisting ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : <ShieldBan className="w-4 h-4 mr-2" />}
+                            {blacklisting ? "Processing..." : "Confirm Blacklist"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Reject Application Dialog */}
+            <RejectApplicationDialog
+                open={showRejectDialog}
+                onOpenChange={setShowRejectDialog}
+                onConfirm={handleRejectConfirm}
+                updating={updating}
+            />
+
+            {/* Payout Hold / Release / Reject Dialog */}
+            <Dialog
+                open={Boolean(payoutDialogAction)}
+                onOpenChange={(open) => {
+                    if (!open && !payoutActionBusy) {
+                        setPayoutDialogAction(null);
+                        setPayoutActionReason('');
+                        setPayoutActionError('');
+                        setAccountTeamVerified(false);
+                    }
+                }}
+            >
+                <DialogContent className="sm:max-w-md rounded-lg border-slate-200">
+                    <DialogHeader>
+                        <DialogTitle>
+                            {payoutDialogAction === 'hold'
+                                ? 'Place Case on Hold'
+                                : payoutDialogAction === 'release'
+                                ? 'Release Case Hold'
+                                : 'Reject and Cancel Payout'}
+                        </DialogTitle>
+                        <DialogDescription className="text-xs">
+                            {payoutDialogAction === 'hold'
+                                ? 'This case will remain payment-pending but will not appear in the payout-ready list until released.'
+                                : payoutDialogAction === 'release'
+                                ? 'This case will return to the payout-ready list.'
+                                : 'Cancels the application as a customer withdrawal.'}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-2 py-2">
+                        <label htmlFor="payout-action-reason" className="text-xs font-semibold text-slate-700">Reason</label>
+                        <Textarea
+                            id="payout-action-reason"
+                            value={payoutActionReason}
+                            onChange={(event) => setPayoutActionReason(event.target.value)}
+                            rows={3}
+                            maxLength={500}
+                            placeholder="Enter reason..."
+                            className="text-xs"
+                        />
+                        {payoutDialogAction === 'reject' && roleCode === 'super_admin' && (
+                            <label className="flex items-start gap-2 pt-2 text-xs text-slate-700">
+                                <input
+                                    type="checkbox"
+                                    className="mt-0.5"
+                                    checked={accountTeamVerified}
+                                    onChange={(event) => setAccountTeamVerified(event.target.checked)}
+                                />
+                                <span>
+                                    I confirmed with the account team that this case has not been paid and is no longer being processed.
+                                </span>
+                            </label>
+                        )}
+                        {payoutActionError && (
+                            <p role="alert" className="text-xs text-rose-700">{payoutActionError}</p>
+                        )}
+                    </div>
+                    <DialogFooter className="gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                                setPayoutDialogAction(null);
+                                setAccountTeamVerified(false);
+                            }}
+                            disabled={payoutActionBusy}
+                            className="text-xs"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            className={payoutDialogAction === 'reject'
+                                ? 'bg-rose-600 text-white hover:bg-rose-700 text-xs'
+                                : 'bg-slate-900 text-white hover:bg-slate-800 text-xs'}
+                            onClick={submitPayoutAction}
+                            disabled={
+                                payoutActionBusy ||
+                                payoutActionReason.trim().length < 3 ||
+                                (payoutDialogAction === 'reject' && roleCode === 'super_admin' && !accountTeamVerified)
+                            }
+                        >
+                            {payoutActionBusy && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                            {payoutDialogAction === 'hold'
+                                ? 'Place on Hold'
+                                : payoutDialogAction === 'release'
+                                ? 'Release Hold'
+                                : 'Confirm Withdrawal'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+        </div>
     );
 }
