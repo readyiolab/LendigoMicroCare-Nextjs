@@ -125,6 +125,12 @@ function FieldCell({ field, value, onChange, disabled, readOnly, audit, emphasiz
   const selectedLabel = selectOptions.find((opt) => opt.value === selectedValue)?.label || value;
 
   if (locked) {
+    const rawVal = field.type === 'select' ? selectedLabel : value;
+    const isPct =
+      (field.key.endsWith('_pct') || field.key === 'penal_roi' || field.key.includes('roi')) &&
+      rawVal !== '' &&
+      rawVal != null;
+    const displayVal = isPct && !String(rawVal).endsWith('%') ? `${rawVal}%` : rawVal;
     return (
       <span
         className={`flex min-h-[2rem] items-center gap-1 rounded-md border px-2.5 py-1.5 text-xs tabular-nums ${
@@ -133,7 +139,7 @@ function FieldCell({ field, value, onChange, disabled, readOnly, audit, emphasiz
             : 'border-slate-100 bg-slate-50 text-slate-700'
         }${manual ? ' ring-1 ring-amber-200' : ''}`}
       >
-        <span className="flex-1 truncate">{(field.type === 'select' ? selectedLabel : value) || '—'}</span>
+        <span className="flex-1 truncate">{displayVal || '—'}</span>
         <AuditHint audit={audit} />
       </span>
     );
@@ -185,6 +191,8 @@ function FieldCell({ field, value, onChange, disabled, readOnly, audit, emphasiz
         emphasize ? 'h-9 text-sm font-semibold' : ''
       }`}
       type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+      step={field.type === 'number' ? 'any' : undefined}
+      placeholder={field.placeholder || undefined}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       disabled={disabled}
