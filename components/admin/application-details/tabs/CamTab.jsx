@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Loader2, Save, Send, RotateCcw, ShieldCheck, Eye, X, RefreshCw, HelpCircle, Lock } from 'lucide-react';
+import { Loader2, Save, Send, RotateCcw, ShieldCheck, Eye, X, RefreshCw, HelpCircle, Lock, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -550,7 +550,8 @@ export default function CamTab() {
   const canEditCam = canEditCamRole && (!isCamLocked || canOverrideLock);
   const canSubmitToUw =
     canEditCamRole &&
-    ['draft', 'submitted', 'under_review', 'pending_eligibility', 'pending_pd', 'returned_to_credit_manager'].includes(status);
+    status !== 'draft' &&
+    ['submitted', 'under_review', 'pending_eligibility', 'pending_pd', 'returned_to_credit_manager'].includes(status);
   const canReturn = canReturnRole && ['recommended', 'approved'].includes(status);
   const canApprove = canApproveRole && status === 'recommended';
   const canSendOffer = canApproveRole && isApproved;
@@ -946,6 +947,18 @@ export default function CamTab() {
         <Alert>
           <AlertDescription>{message}</AlertDescription>
         </Alert>
+      )}
+
+      {status === 'draft' && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900 flex items-start gap-2">
+          <AlertCircle className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-bold">Application is in Draft Status</p>
+            <p className="text-[11px] text-amber-800 mt-0.5">
+              Decision actions (Recommend to Underwriter, Approve, and Send Offer) are restricted while the application is in Draft status. The customer must complete all required steps and submit the application first.
+            </p>
+          </div>
+        </div>
       )}
 
       {isCamLocked && (

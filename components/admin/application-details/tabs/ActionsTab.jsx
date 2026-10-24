@@ -138,11 +138,13 @@ export default function ActionsTab() {
     const breBlocksRecommend = isBreRejectVerdict(creditDecisionResult);
     const breSuggestsRecommend = isBrePreApproveVerdict(creditDecisionResult);
     const appStatus = String(loanApp?.application_status || '').toLowerCase();
+    const isDraft = appStatus === 'draft';
     const [revisionInfo, setRevisionInfo] = useState(null);
     const pendingRevision = revisionInfo?.pending || null;
 
     /** Customer asked for changes on a sent offer: staff re-send a revised offer from this tab. */
     const awaitingRevision =
+        !isDraft &&
         appStatus === 'offer_sent' &&
         (!!pendingRevision ||
             loanApp?.internal_status === 'offer_revision_requested' ||
@@ -150,7 +152,8 @@ export default function ActionsTab() {
 
     /** After UW sanction or a sent offer, Send offer stays available even if credit verdict is REJECT. */
     const alreadySanctioned =
-        [
+        !isDraft &&
+        ([
             'approved',
             'offer_sent',
             'offer_accepted',
@@ -158,7 +161,7 @@ export default function ActionsTab() {
             'video_declaration_submitted',
             'video_declaration_rejected',
             'offer_rejected',
-        ].includes(appStatus) || awaitingRevision;
+        ].includes(appStatus) || awaitingRevision);
 
     useEffect(() => {
         if (appStatus !== 'offer_sent' || !loanApp?.id) {
@@ -196,19 +199,19 @@ export default function ActionsTab() {
 
     // Default status to recommended when BRE says PRE_APPROVED / APPROVED (staff still saves)
     useEffect(() => {
-        if (isReadOnly || !breSuggestsRecommend) return;
+        if (isReadOnly || !breSuggestsRecommend || isDraft) return;
         if (statusUpdate.status) return;
         if (!gates.complete) return;
         if (alreadySanctioned) return;
         setStatusUpdate((p) => ({ ...p, status: p.status || 'recommended' }));
-    }, [breSuggestsRecommend, gates.complete, isReadOnly, setStatusUpdate, statusUpdate.status, alreadySanctioned]);
+    }, [breSuggestsRecommend, gates.complete, isReadOnly, setStatusUpdate, statusUpdate.status, alreadySanctioned, isDraft]);
 
     // After sanction: auto-select Send offer (do not leave UW on Approve with a disabled save button)
     useEffect(() => {
-        if (isReadOnly || !alreadySanctioned) return;
+        if (isReadOnly || !alreadySanctioned || isDraft) return;
         if (statusUpdate.status === 'offer_sent' || statusUpdate.status === 'rejected') return;
         setStatusUpdate((p) => ({ ...p, status: 'offer_sent' }));
-    }, [alreadySanctioned, isReadOnly, setStatusUpdate, statusUpdate.status]);
+    }, [alreadySanctioned, isReadOnly, setStatusUpdate, statusUpdate.status, isDraft]);
 
     // Clear recommend/approve if BRE rejects while that status is selected
     useEffect(() => {
@@ -478,6 +481,10 @@ export default function ActionsTab() {
 
     const handleFormSubmit = (e) => {
         e.preventDefault();
+        if (isDraft && statusUpdate.status !== 'rejected') {
+            alert('Cannot process application: Application is in Draft status. The customer must complete all required steps and submit the application first.');
+            return;
+        }
         if (statusUpdate.status === 'rejected') {
             setShowRejectDialog(true);
             return;
@@ -494,6 +501,10 @@ export default function ActionsTab() {
 
     const confirmOverrideSubmit = (e) => {
         setShowOverrideDialog(false);
+        if (isDraft && statusUpdate.status !== 'rejected') {
+            alert('Cannot process application: Application is in Draft status. The customer must complete all required steps and submit the application first.');
+            return;
+        }
         if (statusUpdate.status === 'rejected') {
             setShowRejectDialog(true);
             return;
@@ -801,6 +812,21 @@ export default function ActionsTab() {
                         </div>
                     )}
 
+                    {/* Draft Status Restrict Action Banner */}
+                    {isDraft && (
+                        <div className="p-3 bg-amber-50/90 border border-amber-200 rounded-lg space-y-1 text-amber-900">
+                            <div className="flex items-center gap-1.5">
+                                <AlertCircle className="w-4 h-4 text-amber-700 shrink-0" />
+                                <span className="text-xs font-bold uppercase tracking-wide">
+                                    Application in Draft Status
+                                </span>
+                            </div>
+                            <p className="text-[11px] text-amber-800 leading-relaxed">
+                                The customer has only partially completed or saved this application as a Draft. All required onboarding steps must be completed and submitted by the customer before this application can be reviewed, recommended, approved, or offered.
+                            </p>
+                        </div>
+                    )}
+
                     {!isCompletedOrPayout && (
                         <form onSubmit={handleFormSubmit} className="space-y-3">
                             <div className="space-y-1">
@@ -813,7 +839,11 @@ export default function ActionsTab() {
                                     className="w-full h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-300 font-medium"
                                 >
                                     <option value="" disabled>Select decision...</option>
-                                    {alreadySanctioned ? (
+                                    {isDraft ? (
+                                        <>
+                                            <option value="rejected">Reject application</option>
+                                        </>
+                                    ) : alreadySanctioned ? (
                                         <>
                                             <option value="offer_sent">Send offer to customer</option>
                                             <option value="rejected">Reject application</option>
@@ -896,7 +926,12 @@ export default function ActionsTab() {
                                 id="decision-submit"
                                 type="submit"
                                 className="w-full h-9 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold uppercase tracking-wider transition-all"
-                                disabled={updating || !statusUpdate.status || (gatesBlockSave && !['super_admin', 'org_admin'].includes(roleCode))}
+                                disabled={
+                                    updating ||
+                                    !statusUpdate.status ||
+                                    (isDraft && statusUpdate.status !== 'rejected') ||
+                                    (gatesBlockSave && !['super_admin', 'org_admin'].includes(roleCode))
+                                }
                             >
                                 {updating ? (
                                     <RefreshCw className="w-3.5 h-3.5 animate-spin mr-1.5" />
@@ -907,7 +942,9 @@ export default function ActionsTab() {
                                 ) : (
                                     <Save className="w-3.5 h-3.5 mr-1.5" />
                                 )}
-                                {['super_admin', 'org_admin'].includes(roleCode) && gatesBlockSave
+                                {isDraft && statusUpdate.status !== 'rejected'
+                                    ? 'AWAITING CUSTOMER SUBMISSION'
+                                    : ['super_admin', 'org_admin'].includes(roleCode) && gatesBlockSave
                                     ? 'DIRECT OVERRIDE & SAVE'
                                     : isSendOffer
                                     ? 'SEND OFFER TO CUSTOMER'
@@ -915,6 +952,7 @@ export default function ActionsTab() {
                                     ? 'REVIEW & REJECT'
                                     : 'SAVE DECISION'}
                             </Button>
+
                         </form>
                     )}
                 </div>
