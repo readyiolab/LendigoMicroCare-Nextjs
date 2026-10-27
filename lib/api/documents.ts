@@ -1,3 +1,4 @@
+import type { AxiosProgressEvent } from 'axios';
 import apiClient from './config';
 import type { Id, Payload, QueryParams } from './types';
 
@@ -121,7 +122,7 @@ export const documentsAPI = {
   downloadDocumentZipFile: (
     applicationId: Id,
     jobId: Id,
-    onDownloadProgress?: (progressEvent: any) => void,
+    onDownloadProgress?: (progressEvent: AxiosProgressEvent) => void,
     token: string | null = null
   ) => {
     const query = token ? `?token=${encodeURIComponent(token)}` : '';
