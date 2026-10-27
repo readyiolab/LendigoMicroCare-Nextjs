@@ -454,9 +454,19 @@ export default function EmploymentTile({
                         </Button>
                         <p className="text-[9px] text-slate-400">
                             {storedUan
-                                ? 'Fallback if the stored UAN fails — discovers UANs linked to the customer mobile.'
-                                : 'Use when UAN is unknown — discovers UANs linked to the customer mobile.'}
+                                 ? 'Fallback if the stored UAN fails — discovers UANs linked to the customer mobile.'
+                                 : 'Use when UAN is unknown — discovers UANs linked to the customer mobile.'}
                         </p>
+                        {runningAction === 'employment-mobile' && (
+                            <p className="text-[10px] text-amber-600 font-medium animate-pulse">
+                                Searching EPFO government records across all regional offices... (typically takes 20–45s)
+                            </p>
+                        )}
+                        {runningAction === 'employment' && (
+                            <p className="text-[10px] text-amber-600 font-medium animate-pulse">
+                                Contacting EPFO government servers to verify UAN... (typically takes 15–30s)
+                            </p>
+                        )}
                     </div>
                 </div>
             )}

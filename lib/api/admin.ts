@@ -760,7 +760,7 @@ export const adminAPI = {
     apiClient.post(`/kyc/digitap/mandate/${applicationId}/resend`),
 
   verifyEmployment: (applicationId: Id, data: Payload) =>
-    apiClient.post(`/kyc/digitap/employment/verify/${applicationId}`, data),
+    apiClient.post(`/kyc/digitap/employment/verify/${applicationId}`, data, { timeout: 90000 }),
 
   verifyProfessional: (applicationId: Id, idType: string, data: Payload) =>
     apiClient.post(`/kyc/digitap/professional/verify/${applicationId}/${idType}`, data),
