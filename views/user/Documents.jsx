@@ -42,6 +42,7 @@ export default function Documents() {
   };
 
   const handleDownloadAll = async (vaultItem) => {
+    if (downloadingAppId) return;
     const appRef = vaultItem.applicationId;
     if (!appRef) return;
     setDownloadingAppId(appRef);

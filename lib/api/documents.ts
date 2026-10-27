@@ -116,11 +116,24 @@ export const documentsAPI = {
   getDocumentZipJob: (applicationId: Id, jobId: Id) =>
     apiClient.get(`/documents/download-all/${encodeURIComponent(applicationId)}/jobs/${jobId}`),
 
-  downloadDocumentZipFile: (applicationId: Id, jobId: Id) =>
-    apiClient.get(`/documents/download-all/${encodeURIComponent(applicationId)}/jobs/${jobId}/file`, {
+  getBaseUrl: () => apiClient.defaults?.baseURL || '',
+
+  downloadDocumentZipFile: (
+    applicationId: Id,
+    jobId: Id,
+    onDownloadProgress?: (progressEvent: any) => void,
+    token: string | null = null
+  ) => {
+    const query = token ? `?token=${encodeURIComponent(token)}` : '';
+    return apiClient.get(`/documents/download-all/${encodeURIComponent(applicationId)}/jobs/${jobId}/file${query}`, {
       responseType: 'blob',
-      timeout: 120000,
-    }),
+      timeout: 600000,
+      headers: {
+        'X-No-Compression': '1',
+      },
+      onDownloadProgress,
+    });
+  },
 
   // Get Document Vault (Signed Agreements, NOC, etc.)
   getDocumentVault: () => apiClient.get('/documents/vault'),

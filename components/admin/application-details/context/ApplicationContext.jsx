@@ -219,6 +219,7 @@ export const ApplicationProvider = ({
         setUploading,
         setUploadingKey,
         setUploadingType,
+        downloadingDoc,
         setDownloadingDoc,
         setDownloadingCAM,
         setActiveTab,

@@ -25,6 +25,7 @@ export function useApplicationDocuments({
   setUploading,
   setUploadingKey,
   setUploadingType,
+  downloadingDoc,
   setDownloadingDoc,
   setDownloadingCAM,
   setActiveTab,
@@ -69,6 +70,7 @@ export function useApplicationDocuments({
   };
 
   const handleDownloadAll = async () => {
+    if (downloadingDoc) return;
     const appRef = loanApp?.id || applicationId;
     const appNumber = loanApp?.application_number || applicationId;
     try {
@@ -78,8 +80,10 @@ export function useApplicationDocuments({
         onStatus: (phase) => {
           if (phase === 'processing') setDownloadingDoc('zip_processing');
           else if (phase === 'ready') setDownloadingDoc('zip_ready');
+          else if (phase === 'downloading') setDownloadingDoc('zip_downloading');
           else setDownloadingDoc('zip_queued');
         },
+        onProgress: ({ percent }) => setDownloadingDoc(`zip_downloading_${percent}`),
       });
       setMessage('All documents downloaded');
     } catch (err) {

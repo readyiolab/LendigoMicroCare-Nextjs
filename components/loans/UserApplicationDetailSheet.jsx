@@ -186,6 +186,7 @@ export default function UserApplicationDetailSheet({ applicationId, isOpen, onCl
   );
 
   const handleDownloadAll = async () => {
+    if (downloadingAll) return;
     const appRef = loanApp?.id || applicationId;
     if (!appRef) return;
     setDownloadingAll(true);
