@@ -20,7 +20,6 @@ const routeImports: Record<string, () => Promise<unknown>> = {
   "/admin/reconciliation": () => import("@/views/admin/AdminReconciliation"),
   "/admin/bre": () => import("@/views/admin/AdminBRE"),
   "/admin/roles": () => import("@/views/admin/AdminRoleManagement"),
-  "/admin/products": () => import("@/views/admin/AdminLoanProducts"),
   "/admin/collection": () => import("@/views/admin/AdminCollections"),
   "/admin/cases": () => import("@/views/admin/CaseManagement"),
   "/admin/ledger": () => import("@/views/admin/AdminLedgerBook"),

@@ -1,10 +1,6 @@
-"use client"
+import { redirect } from "next/navigation"
 
-import dynamic from "next/dynamic"
-import { Spinner } from "@/components/ui/spinner"
-
-const AdminLoanProducts = dynamic(() => import("@/views/admin/AdminLoanProducts"), { ssr: false, loading: () => <Spinner.Full /> })
-
+/** Loan products catalog removed — CAM policy defaults own package limits/fees. */
 export default function Page() {
-  return <AdminLoanProducts />
+  redirect("/admin/applications")
 }

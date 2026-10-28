@@ -177,7 +177,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { id: "staff-users", label: "Staff users", path: "/admin/staff-users", roles: ["super_admin", "org_admin"], icon: "UserCog" },
       { id: "roles", label: "Role management", path: "/admin/roles", roles: ["super_admin", "org_admin"], icon: "UserCog" },
       { id: "credit-buckets", label: "Credit buckets", path: "/admin/credit-buckets", roles: ["super_admin"], icon: "Layers" },
-      { id: "products", label: "Loan products", path: "/admin/products", roles: ["super_admin"], icon: "Package" },
     ],
   },
 ]

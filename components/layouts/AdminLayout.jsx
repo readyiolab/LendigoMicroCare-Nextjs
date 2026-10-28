@@ -147,7 +147,6 @@ const SIDEBAR_IMAGE_BY_ID = {
   'staff-users': 'staff-users.webp',
   roles: 'role-management.webp',
   'credit-buckets': 'credit-bucket.webp',
-  products: 'loan product.webp',
   'bucket-sanctional': 'sanction.webp',
 };
 

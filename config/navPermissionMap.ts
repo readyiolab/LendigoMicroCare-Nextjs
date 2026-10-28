@@ -51,7 +51,6 @@ export const NAV_ITEM_PERMISSION_CODE: Record<string, string> = {
   "staff-users": "admin.users",
   roles: "admin.roles",
   "credit-buckets": "admin.credit_buckets",
-  products: "admin.products",
 }
 
 export function getNavItemPermissionCode(itemId: string): string | null {
